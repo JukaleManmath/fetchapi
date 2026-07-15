@@ -1,0 +1,440 @@
+openapi: "3.1.0"
+info:
+  title: Stripe API
+  description: >
+    A subset of the Stripe API covering customer management. The Stripe API is
+    organized around REST and uses conventional HTTP response codes to indicate
+    the success or failure of an API request. The full API reference is
+    available at https://stripe.com/docs/api.
+  version: "2024-06-20"
+  contact:
+    name: Stripe Support
+    url: https://support.stripe.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.stripe.com
+    description: Stripe API production server
+tags:
+  - name: customers
+    description: >
+      Customer objects allow you to perform recurring charges, and to track
+      multiple charges that are associated with the same customer. The API
+      allows you to create, delete, and update your customers.
+security:
+  - BasicAuth: []
+paths:
+  /v1/customers:
+    get:
+      tags:
+        - customers
+      summary: List all customers
+      description: >
+        Returns a list of your customers. The customers are returned sorted by
+        creation date, with the most recent customers appearing first.
+      operationId: GetCustomers
+      parameters:
+        - name: limit
+          in: query
+          description: >
+            A limit on the number of objects to be returned. Limit can range
+            between 1 and 100, and the default is 10.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 20
+        - name: starting_after
+          in: query
+          description: >
+            A cursor for use in pagination. `starting_after` is an object ID
+            that defines your place in the list. For instance, if you make a
+            list request and receive 100 objects, ending with `obj_foo`, your
+            subsequent call can include `starting_after=obj_foo` in order to
+            fetch the next page of the list.
+          required: false
+          schema:
+            type: string
+          example: cus_NffrFeUfNV2Hib
+        - name: ending_before
+          in: query
+          description: >
+            A cursor for use in pagination. `ending_before` is an object ID
+            that defines your place in the list. For instance, if you make a
+            list request and receive 100 objects, starting with `obj_bar`, your
+            subsequent call can include `ending_before=obj_bar` in order to
+            fetch the previous page of the list.
+          required: false
+          schema:
+            type: string
+        - name: email
+          in: query
+          description: >
+            A case-sensitive filter on the list based on the customer's `email`
+            field. The value must be a string.
+          required: false
+          schema:
+            type: string
+            format: email
+      responses:
+        "200":
+          description: A paginated list of customer objects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+              example:
+                object: list
+                data:
+                  - id: cus_NffrFeUfNV2Hib
+                    object: customer
+                    email: jenny.rosen@example.com
+                    name: Jenny Rosen
+                    created: 1680893993
+                has_more: false
+                url: /v1/customers
+        "400":
+          description: Bad request. Invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+        "401":
+          description: Unauthorized. No valid API key was provided.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+    post:
+      tags:
+        - customers
+      summary: Create a customer
+      description: >
+        Creates a new customer object. Use this endpoint to create a customer
+        profile that can be used across all Stripe products. Creating a customer
+        with no arguments is acceptable — you can fill in the details later.
+      operationId: PostCustomers
+      requestBody:
+        required: false
+        description: Customer creation parameters.
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerRequest"
+            example:
+              email: jenny.rosen@example.com
+              name: Jenny Rosen
+              description: My first test customer
+      responses:
+        "200":
+          description: The newly created customer object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "400":
+          description: Bad request. The request body contains invalid parameters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+        "401":
+          description: Unauthorized. No valid API key was provided.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+  /v1/customers/{customer}:
+    get:
+      tags:
+        - customers
+      summary: Retrieve a customer
+      description: >
+        Retrieves a Customer object. The customer's default payment source and
+        subscriptions are included. If you want to include the customer's most
+        recent balance transaction, expand the `balance_transactions` field.
+      operationId: GetCustomersCustomer
+      parameters:
+        - name: customer
+          in: path
+          description: The identifier of the customer to be retrieved.
+          required: true
+          schema:
+            type: string
+          example: cus_NffrFeUfNV2Hib
+      responses:
+        "200":
+          description: The requested customer object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+              example:
+                id: cus_NffrFeUfNV2Hib
+                object: customer
+                email: jenny.rosen@example.com
+                name: Jenny Rosen
+                description: My first test customer
+                created: 1680893993
+                livemode: false
+        "400":
+          description: Bad request. The provided customer ID is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+        "401":
+          description: Unauthorized. No valid API key was provided.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+        "404":
+          description: Not found. No customer was found with the provided ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+    delete:
+      tags:
+        - customers
+      summary: Delete a customer
+      description: >
+        Permanently deletes a customer. It cannot be undone. Also immediately
+        cancels any active subscriptions on the customer.
+      operationId: DeleteCustomersCustomer
+      parameters:
+        - name: customer
+          in: path
+          description: The identifier of the customer to be deleted.
+          required: true
+          schema:
+            type: string
+          example: cus_NffrFeUfNV2Hib
+      responses:
+        "200":
+          description: The deleted customer object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedCustomer"
+        "401":
+          description: Unauthorized. No valid API key was provided.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+        "404":
+          description: Not found. No customer was found with the provided ID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StripeError"
+components:
+  schemas:
+    Customer:
+      type: object
+      description: >
+        Customer objects allow you to perform recurring charges, and to track
+        multiple charges, that are associated with the same customer.
+      required:
+        - id
+        - object
+        - created
+        - livemode
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the object.
+          example: cus_NffrFeUfNV2Hib
+        object:
+          type: string
+          description: String representing the object's type. Always `customer`.
+          enum:
+            - customer
+        email:
+          type: ["string", "null"]
+          format: email
+          description: The customer's email address.
+          example: jenny.rosen@example.com
+        name:
+          type: ["string", "null"]
+          description: The customer's full name or business name.
+          example: Jenny Rosen
+        description:
+          type: ["string", "null"]
+          description: An arbitrary string attached to the object. Often useful for displaying to users.
+          example: My first test customer
+        phone:
+          type: ["string", "null"]
+          description: The customer's phone number.
+          example: "+18888675309"
+        currency:
+          type: ["string", "null"]
+          description: >
+            Three-letter ISO 4217 code for the currency the customer can be
+            charged in for recurring billing purposes.
+          example: usd
+        balance:
+          type: integer
+          description: >
+            Current balance, if any, being stored on the customer. If negative,
+            the customer has credit to apply to their next invoice. If positive,
+            the customer has an amount owed that will be added to their next
+            invoice.
+          example: 0
+        created:
+          type: integer
+          description: Time at which the object was created. Measured in seconds since the Unix epoch.
+          example: 1680893993
+        livemode:
+          type: boolean
+          description: >
+            Has the value `true` if the object exists in live mode or the value
+            `false` if the object exists in test mode.
+          example: false
+        metadata:
+          type: object
+          description: >
+            Set of key-value pairs that you can attach to an object. This can
+            be useful for storing additional information about the object in a
+            structured format.
+          additionalProperties:
+            type: string
+    CustomerList:
+      type: object
+      description: A paginated list of customer objects.
+      required:
+        - object
+        - data
+        - has_more
+        - url
+      properties:
+        object:
+          type: string
+          description: String representing the object's type. Always `list`.
+          enum:
+            - list
+        data:
+          type: array
+          description: An array of customer objects.
+          items:
+            $ref: "#/components/schemas/Customer"
+        has_more:
+          type: boolean
+          description: >
+            Whether there are more results available. If `true`, use
+            `starting_after` to fetch the next page.
+          example: false
+        url:
+          type: string
+          description: The URL where this list can be accessed.
+          example: /v1/customers
+    CreateCustomerRequest:
+      type: object
+      description: Request body for creating a new customer.
+      properties:
+        email:
+          type: string
+          format: email
+          description: The customer's email address.
+          example: jenny.rosen@example.com
+        name:
+          type: string
+          description: The customer's full name or business name.
+          example: Jenny Rosen
+        description:
+          type: string
+          description: An arbitrary string that you can attach to a customer object. It is displayed alongside the customer in the dashboard.
+          example: My first test customer
+        phone:
+          type: string
+          description: The customer's phone number.
+          example: "+18888675309"
+        metadata:
+          type: object
+          description: >
+            Set of key-value pairs that you can attach to an object. This can
+            be useful for storing additional information about the object in a
+            structured format. Individual keys can be unset by posting an empty
+            value to them. All keys can be unset by posting an empty value to
+            `metadata`.
+          additionalProperties:
+            type: string
+    DeletedCustomer:
+      type: object
+      description: Confirmation of a deleted customer.
+      required:
+        - id
+        - object
+        - deleted
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the deleted customer.
+          example: cus_NffrFeUfNV2Hib
+        object:
+          type: string
+          description: String representing the object's type. Always `customer`.
+          enum:
+            - customer
+        deleted:
+          type: boolean
+          description: Always `true` when the deletion was successful.
+          example: true
+    StripeError:
+      type: object
+      description: >
+        An error response returned by the Stripe API. Stripe uses conventional
+        HTTP response codes to indicate the success or failure of an API
+        request.
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          description: Details about the error that occurred.
+          required:
+            - type
+            - message
+          properties:
+            type:
+              type: string
+              description: >
+                The type of error returned. One of `api_error`,
+                `card_error`, `idempotency_error`, or `invalid_request_error`.
+              enum:
+                - api_error
+                - card_error
+                - idempotency_error
+                - invalid_request_error
+              example: invalid_request_error
+            message:
+              type: string
+              description: A human-readable message providing more details about the error.
+              example: No such customer
+            code:
+              type: string
+              description: For some errors that could be handled programmatically, a short string indicating the error code reported.
+              example: resource_missing
+            param:
+              type: ["string", "null"]
+              description: If the error is parameter-specific, the parameter related to the error.
+              example: customer
+            doc_url:
+              type: ["string", "null"]
+              description: A URL to more information about the error code reported.
+              example: https://stripe.com/docs/error-codes/resource-missing
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
+      description: >
+        Stripe uses API keys to authenticate requests. Provide your secret API
+        key as the username in HTTP Basic Auth. No password is required. Your
+        API keys carry many privileges, so be sure to keep them secure. Use
+        `Bearer` token authentication in the Authorization header, passing your
+        secret key as `sk_test_...` or `sk_live_...`.

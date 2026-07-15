@@ -1,0 +1,9 @@
+# Invalid OpenAPI spec — has a valid `info` block but is missing the
+# required `paths` field. The OpenAPI 3.0 specification requires `paths`
+# at the root level. The ingestion validator must reject this document
+# with a clear error indicating that `paths` is required.
+openapi: "3.0.3"
+info:
+  title: Missing Paths API
+  description: This spec is intentionally invalid — it has no paths object.
+  version: "1.0.0"

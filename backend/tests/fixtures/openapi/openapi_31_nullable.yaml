@@ -1,0 +1,128 @@
+openapi: "3.1.0"
+info:
+  title: OpenAPI 3.1 Nullable Types
+  description: >
+    Tests OpenAPI 3.1 array type syntax for nullable fields. The ingestion
+    normalizer must convert `type: ["string", "null"]` to
+    `type: string, nullable: true` when extracting canonical entities.
+  version: "1.0.0"
+paths:
+  /users/{id}:
+    get:
+      summary: Get a user
+      description: Returns a user profile. Several fields are nullable.
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The user's unique identifier.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found.
+  /users:
+    post:
+      summary: Create a user
+      description: Creates a new user account.
+      operationId: createUser
+      requestBody:
+        required: true
+        description: User creation payload.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Invalid request body.
+components:
+  schemas:
+    User:
+      type: object
+      description: A user account in the system.
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the user.
+          example: 42
+        email:
+          type: string
+          format: email
+          description: The user's primary email address.
+          example: user@example.com
+        display_name:
+          # OpenAPI 3.1 nullable via array type — normalizer must handle this
+          type: ["string", "null"]
+          description: Optional display name shown in the UI. Null if not set.
+          example: Alice Smith
+        bio:
+          # Another nullable field using the 3.1 array syntax
+          type: ["string", "null"]
+          description: Optional short biography. Null if the user has not provided one.
+          example: "Software engineer and tea enthusiast."
+        phone:
+          # Nullable with a format constraint
+          type: ["string", "null"]
+          description: Optional phone number in E.164 format. Null if not provided.
+          example: "+15551234567"
+        role:
+          type: string
+          description: The user's role in the system.
+          enum:
+            - admin
+            - member
+            - viewer
+          default: member
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the account was created, in UTC ISO 8601 format.
+        deactivated_at:
+          # Nullable datetime — common pattern
+          type: ["string", "null"]
+          format: date-time
+          description: Timestamp when the account was deactivated. Null if the account is active.
+    CreateUserRequest:
+      type: object
+      description: Request body for creating a new user.
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: The user's primary email address. Must be unique.
+          example: newuser@example.com
+        display_name:
+          type: ["string", "null"]
+          description: Optional display name. Null or omitted to leave unset.
+          example: Bob Jones
+        phone:
+          type: ["string", "null"]
+          description: Optional phone number in E.164 format.
+          example: "+15559876543"
+        role:
+          type: string
+          description: The user's initial role. Defaults to member.
+          enum:
+            - admin
+            - member
+            - viewer
+          default: member

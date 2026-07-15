@@ -1,0 +1,141 @@
+openapi: "3.0.3"
+info:
+  title: Recursive Schema API
+  description: >
+    Tests that the ingestion pipeline handles schemas with cycles correctly.
+    The `Category` schema has a nullable `parent` property referencing itself,
+    and the `Comment` schema has a `replies` array of the same type. Neither
+    should cause infinite recursion during canonical extraction.
+  version: "1.0.0"
+paths:
+  /categories:
+    get:
+      summary: List categories
+      description: Returns a flat list of all categories. Parent relationships form a tree.
+      operationId: listCategories
+      responses:
+        "200":
+          description: A list of category objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /categories/{id}:
+    get:
+      summary: Get a category
+      description: Returns a single category including its parent reference if it is a subcategory.
+      operationId: getCategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique identifier of the category.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Category found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+        "404":
+          description: Category not found.
+  /posts/{postId}/comments:
+    get:
+      summary: List comments on a post
+      description: >
+        Returns top-level comments for a post. Each comment may have nested
+        replies of the same Comment type, forming a recursive tree structure.
+      operationId: listComments
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: Unique identifier of the post.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of top-level comment objects (replies nested inside).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+components:
+  schemas:
+    Category:
+      type: object
+      description: >
+        A hierarchical content category. A category with no parent is a
+        top-level category; otherwise it is a subcategory. The `parent`
+        property creates a recursive self-reference.
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the category.
+          example: 5
+        name:
+          type: string
+          description: Display name of the category.
+          example: Programming Languages
+        slug:
+          type: string
+          description: URL-safe identifier for the category.
+          example: programming-languages
+        description:
+          type: string
+          description: Optional longer description of the category.
+          example: Articles and tutorials about programming languages.
+        parent:
+          # Recursive self-reference: a category's parent is also a Category.
+          # Cycle detection must stop here instead of recursing indefinitely.
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Category"
+          description: >
+            The parent category of this category, or null if this is a
+            top-level category. The ingestion layer must detect this cycle
+            and store a reference pointer rather than recursing further.
+    Comment:
+      type: object
+      description: >
+        A comment on a post. Comments may contain nested replies, each of
+        which is also a Comment. This creates a recursive array reference.
+      required:
+        - id
+        - author
+        - body
+        - created_at
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the comment.
+          example: 101
+        author:
+          type: string
+          description: Display name of the comment author.
+          example: alice
+        body:
+          type: string
+          description: The comment text in plain text or Markdown.
+          example: "Great article! I learned a lot."
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the comment was posted, in UTC ISO 8601 format.
+        replies:
+          type: array
+          description: >
+            Nested replies to this comment. Each reply is itself a Comment,
+            creating a recursive structure. The ingestion layer must detect
+            this cycle and not recurse beyond the configured depth limit.
+          items:
+            $ref: "#/components/schemas/Comment"

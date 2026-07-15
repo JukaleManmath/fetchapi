@@ -1,0 +1,280 @@
+openapi: "3.0.3"
+info:
+  title: Internal References API
+  description: >
+    Tests that internal `$ref` resolution works correctly. All schemas are
+    defined in `components/schemas` and referenced via `#/components/schemas/`
+    pointers from operation request/response bodies.
+  version: "1.0.0"
+paths:
+  /orders:
+    get:
+      summary: List orders
+      description: Returns a paginated list of orders for the authenticated user.
+      operationId: listOrders
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: Page number for pagination (1-indexed).
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: per_page
+          in: query
+          required: false
+          description: Number of results per page.
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Paginated list of order objects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPage"
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create an order
+      description: Creates a new order with the specified line items.
+      operationId: createOrder
+      requestBody:
+        required: true
+        description: Order creation payload including line items.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderRequest"
+      responses:
+        "201":
+          description: Order created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /orders/{orderId}:
+    get:
+      summary: Get an order
+      description: Returns a single order by its ID.
+      operationId: getOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: Unique identifier of the order.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Order found and returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Order not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    Order:
+      type: object
+      description: An order placed by a customer.
+      required:
+        - id
+        - status
+        - items
+        - total_amount
+        - currency
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the order.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        items:
+          type: array
+          description: Line items included in the order.
+          items:
+            $ref: "#/components/schemas/LineItem"
+        total_amount:
+          type: integer
+          description: Total order amount in the smallest currency unit (e.g. cents for USD).
+          example: 4999
+        currency:
+          type: string
+          description: ISO 4217 currency code.
+          example: usd
+          minLength: 3
+          maxLength: 3
+        shipping_address:
+          $ref: "#/components/schemas/Address"
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the order was placed, in UTC ISO 8601 format.
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the order was last updated, in UTC ISO 8601 format.
+    OrderStatus:
+      type: string
+      description: The current fulfillment status of an order.
+      enum:
+        - pending
+        - confirmed
+        - shipped
+        - delivered
+        - cancelled
+        - refunded
+      example: confirmed
+    LineItem:
+      type: object
+      description: A single product line within an order.
+      required:
+        - product_id
+        - quantity
+        - unit_price
+      properties:
+        product_id:
+          type: string
+          description: Identifier of the product being ordered.
+          example: prod_abc123
+        name:
+          type: string
+          description: Display name of the product at the time of order.
+          example: Wireless Keyboard
+        quantity:
+          type: integer
+          description: Number of units ordered.
+          minimum: 1
+          example: 2
+        unit_price:
+          type: integer
+          description: Price per unit in the smallest currency unit.
+          example: 2499
+    Address:
+      type: object
+      description: A postal shipping address.
+      required:
+        - line1
+        - city
+        - country
+      properties:
+        line1:
+          type: string
+          description: First line of the street address.
+          example: 123 Main Street
+        line2:
+          type: string
+          description: Second line of the street address (apartment, suite, etc.).
+          example: Apt 4B
+        city:
+          type: string
+          description: City or town name.
+          example: San Francisco
+        state:
+          type: string
+          description: State, province, or region.
+          example: CA
+        postal_code:
+          type: string
+          description: Postal or ZIP code.
+          example: "94105"
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code.
+          example: US
+          minLength: 2
+          maxLength: 2
+    CreateOrderRequest:
+      type: object
+      description: Request body for placing a new order.
+      required:
+        - items
+        - currency
+      properties:
+        items:
+          type: array
+          description: Line items to include in the order.
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/LineItem"
+        currency:
+          type: string
+          description: ISO 4217 currency code for pricing.
+          example: usd
+        shipping_address:
+          $ref: "#/components/schemas/Address"
+    OrderPage:
+      type: object
+      description: A single page of paginated order results.
+      required:
+        - data
+        - total
+        - page
+        - per_page
+      properties:
+        data:
+          type: array
+          description: List of orders on this page.
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+          description: Total number of orders matching the query.
+          example: 142
+        page:
+          type: integer
+          description: Current page number (1-indexed).
+          example: 1
+        per_page:
+          type: integer
+          description: Number of results per page.
+          example: 20
+    ErrorResponse:
+      type: object
+      description: Standard error response body.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: ORDER_NOT_FOUND
+        message:
+          type: string
+          description: Human-readable description of the error.
+          example: The requested order does not exist.
+        details:
+          type: object
+          description: Additional error context, if available.
+          additionalProperties: true

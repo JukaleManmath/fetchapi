@@ -1,0 +1,288 @@
+openapi: "3.0.3"
+info:
+  title: Multiple Security Schemes API
+  description: >
+    Tests extraction of multiple security schemes and per-operation security
+    overrides. The API defines three schemes (API key, HTTP Bearer, OAuth2)
+    and applies different combinations at global and operation level.
+  version: "1.0.0"
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+# Global default: require either apiKey or bearer token
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+paths:
+  /public/status:
+    get:
+      summary: Service status (public)
+      description: >
+        Returns the current service health status. This endpoint requires no
+        authentication and overrides the global security to an empty array.
+      operationId: getStatus
+      security: []
+      responses:
+        "200":
+          description: Service is operational.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+  /data:
+    get:
+      summary: Fetch data
+      description: >
+        Returns data records. Accepts either an API key in the header or a
+        Bearer token. Uses the globally defined security — no override needed.
+      operationId: getData
+      responses:
+        "200":
+          description: Data retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataList"
+        "401":
+          description: Missing or invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/config:
+    get:
+      summary: Get admin configuration
+      description: >
+        Returns system configuration. Requires Bearer token authentication
+        only — API key is not sufficient for admin endpoints.
+      operationId: getAdminConfig
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Admin configuration returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminConfig"
+        "401":
+          description: Unauthorized. Bearer token required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden. The token does not have admin scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /oauth/data:
+    get:
+      summary: Fetch data (OAuth)
+      description: >
+        Returns data records for an OAuth-authorized user. Requires the
+        `data:read` OAuth scope. API key authentication is not accepted here.
+      operationId: getOAuthData
+      security:
+        - OAuth2:
+            - data:read
+      responses:
+        "200":
+          description: OAuth-authorized data response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataList"
+        "401":
+          description: Not authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient scope. The `data:read` scope is required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /oauth/write:
+    post:
+      summary: Write data (OAuth)
+      description: >
+        Creates a new data record. Requires both `data:read` and `data:write`
+        OAuth scopes.
+      operationId: writeOAuthData
+      security:
+        - OAuth2:
+            - data:read
+            - data:write
+      requestBody:
+        required: true
+        description: Data record to create.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRecord"
+      responses:
+        "201":
+          description: Record created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRecord"
+        "400":
+          description: Invalid request body.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient OAuth scopes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /mixed:
+    get:
+      summary: Mixed authentication endpoint
+      description: >
+        Accepts either an API key OR an OAuth token with `data:read` scope.
+        Demonstrates multiple independent security alternatives on one operation.
+      operationId: getMixedAuth
+      security:
+        - ApiKeyAuth: []
+        - OAuth2:
+            - data:read
+      responses:
+        "200":
+          description: Request authenticated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataList"
+        "401":
+          description: No valid credentials provided.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    StatusResponse:
+      type: object
+      description: Health and status information for the service.
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+            - down
+          example: ok
+        version:
+          type: string
+          description: Deployed version of the service.
+          example: "2.4.1"
+        uptime_seconds:
+          type: integer
+          description: Seconds the service has been running since last restart.
+          example: 86400
+    DataList:
+      type: object
+      description: Paginated list of data records.
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRecord"
+        total:
+          type: integer
+          description: Total number of records available.
+          example: 42
+    DataRecord:
+      type: object
+      description: A single data record.
+      required:
+        - id
+        - value
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the record.
+        value:
+          type: string
+          description: Record content.
+          example: example value
+        created_at:
+          type: string
+          format: date-time
+          description: When the record was created, in UTC ISO 8601 format.
+    AdminConfig:
+      type: object
+      description: Administrative configuration values.
+      properties:
+        maintenance_mode:
+          type: boolean
+          description: Whether maintenance mode is enabled.
+          example: false
+        max_connections:
+          type: integer
+          description: Maximum allowed concurrent connections.
+          example: 500
+        feature_flags:
+          type: object
+          description: Active feature flags.
+          additionalProperties:
+            type: boolean
+    ErrorResponse:
+      type: object
+      description: Standard error response body.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+          example: UNAUTHORIZED
+        message:
+          type: string
+          description: Human-readable error description.
+          example: A valid API key or Bearer token is required.
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: >
+        API key passed in the `X-API-Key` request header. Obtain a key from
+        the developer portal. Keys have configurable rate limits and scopes.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT Bearer token in the `Authorization: Bearer <token>` header.
+        Tokens are issued by the authentication service and expire after 1 hour.
+    OAuth2:
+      type: oauth2
+      description: >
+        OAuth 2.0 authorization code flow. Use this scheme for delegated access
+        on behalf of end users.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.example.com/oauth/authorize
+          tokenUrl: https://auth.example.com/oauth/token
+          refreshUrl: https://auth.example.com/oauth/token
+          scopes:
+            data:read: Read access to data records
+            data:write: Write access to create and modify data records
+            admin: Full administrative access

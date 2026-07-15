@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 540" width="780" height="540" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+
+  <!-- Background -->
+  <rect width="780" height="540" fill="#0F0F13" rx="16"/>
+
+  <!-- ── LAYER 1: Developer Editor ──────────────────────────── -->
+  <rect x="160" y="24" width="460" height="72" rx="10" fill="#1E1B2E" stroke="#6D28D9" stroke-width="1.5"/>
+  <text x="390" y="52" text-anchor="middle" font-size="13" font-weight="600" fill="#E2E8F0">Developer's Editor</text>
+  <text x="390" y="72" text-anchor="middle" font-size="11" fill="#94A3B8">Cursor · Claude Desktop · VS Code + Cline</text>
+
+  <!-- Arrow: Editor → FetchAPI -->
+  <line x1="390" y1="96" x2="390" y2="134" stroke="#6D28D9" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <polygon points="390,140 385,130 395,130" fill="#6D28D9"/>
+  <rect x="316" y="107" width="148" height="20" rx="4" fill="#0F0F13"/>
+  <text x="390" y="121" text-anchor="middle" font-size="10" fill="#818CF8">MCP · HTTP</text>
+
+  <!-- ── LAYER 2: FetchAPI box ──────────────────────────────── -->
+  <rect x="60" y="142" width="660" height="188" rx="10" fill="#12111A" stroke="#4338CA" stroke-width="1.5"/>
+  <rect x="60" y="142" width="660" height="26" rx="10" fill="#1E1B2E"/>
+  <rect x="60" y="155" width="660" height="13" fill="#1E1B2E"/>
+  <text x="390" y="160" text-anchor="middle" font-size="12" font-weight="700" fill="#A5B4FC" letter-spacing="1">FetchAPI  ·  FastAPI</text>
+
+  <!-- HTTP API box -->
+  <rect x="90" y="182" width="190" height="72" rx="8" fill="#1A1830" stroke="#4338CA" stroke-width="1"/>
+  <text x="185" y="204" text-anchor="middle" font-size="12" font-weight="600" fill="#C7D2FE">HTTP API</text>
+  <text x="185" y="222" text-anchor="middle" font-size="10" fill="#64748B">POST /v1/sources/openapi/upload</text>
+  <text x="185" y="238" text-anchor="middle" font-size="10" fill="#64748B">GET  /v1/sources/{id}/operations</text>
+
+  <!-- MCP Server box -->
+  <rect x="500" y="182" width="190" height="72" rx="8" fill="#1A1830" stroke="#4338CA" stroke-width="1"/>
+  <text x="595" y="204" text-anchor="middle" font-size="12" font-weight="600" fill="#C7D2FE">MCP Server</text>
+  <text x="595" y="222" text-anchor="middle" font-size="10" fill="#64748B">fetch_get_operation</text>
+  <text x="595" y="238" text-anchor="middle" font-size="10" fill="#64748B">fetch_search_docs  +7</text>
+
+  <!-- Connectors from HTTP + MCP down to Application -->
+  <line x1="185" y1="254" x2="185" y2="278" stroke="#4338CA" stroke-width="1.2"/>
+  <line x1="595" y1="254" x2="595" y2="278" stroke="#4338CA" stroke-width="1.2"/>
+  <line x1="185" y1="278" x2="595" y2="278" stroke="#4338CA" stroke-width="1.2"/>
+  <line x1="390" y1="278" x2="390" y2="292" stroke="#4338CA" stroke-width="1.2"/>
+  <polygon points="390,298 385,288 395,288" fill="#4338CA"/>
+
+  <!-- Application Layer box -->
+  <rect x="270" y="300" width="240" height="76" rx="8" fill="#1A1830" stroke="#4338CA" stroke-width="1"/>
+  <text x="390" y="322" text-anchor="middle" font-size="12" font-weight="600" fill="#C7D2FE">Application Layer</text>
+  <text x="390" y="340" text-anchor="middle" font-size="10" fill="#64748B">Ingestion  ·  Query Router</text>
+  <text x="390" y="356" text-anchor="middle" font-size="10" fill="#64748B">Answer Generation  ·  Citations</text>
+
+  <!-- Arrow: Application → Storage row -->
+  <line x1="390" y1="376" x2="390" y2="400" stroke="#4338CA" stroke-width="1.5"/>
+  <polygon points="390,406 385,396 395,396" fill="#4338CA"/>
+
+  <!-- ── LAYER 3: Storage ──────────────────────────────────── -->
+
+  <!-- Fan lines from 390 to each storage box center -->
+  <!-- PostgreSQL center=135, Qdrant center=305, MinIO center=475, Redis center=645 -->
+  <line x1="390" y1="406" x2="390" y2="414" stroke="#4338CA" stroke-width="1.2"/>
+  <line x1="135" y1="414" x2="645" y2="414" stroke="#4338CA" stroke-width="1.2"/>
+
+  <line x1="135" y1="414" x2="135" y2="432" stroke="#4338CA" stroke-width="1.2"/>
+  <polygon points="135,438 130,428 140,428" fill="#4338CA"/>
+
+  <line x1="305" y1="414" x2="305" y2="432" stroke="#6366F1" stroke-width="1.2"/>
+  <polygon points="305,438 300,428 310,428" fill="#6366F1"/>
+
+  <line x1="475" y1="414" x2="475" y2="432" stroke="#7C3AED" stroke-width="1.2"/>
+  <polygon points="475,438 470,428 480,428" fill="#7C3AED"/>
+
+  <line x1="645" y1="414" x2="645" y2="432" stroke="#2563EB" stroke-width="1.2"/>
+  <polygon points="645,438 640,428 650,428" fill="#2563EB"/>
+
+  <!-- PostgreSQL -->
+  <rect x="52" y="440" width="166" height="76" rx="8" fill="#1A1830" stroke="#4338CA" stroke-width="1.2"/>
+  <rect x="52" y="440" width="166" height="26" rx="8" fill="#1E1B4B"/>
+  <rect x="52" y="452" width="166" height="14" fill="#1E1B4B"/>
+  <text x="135" y="458" text-anchor="middle" font-size="11" font-weight="700" fill="#818CF8">PostgreSQL</text>
+  <text x="135" y="480" text-anchor="middle" font-size="10" fill="#64748B">Sources · Revisions</text>
+  <text x="135" y="496" text-anchor="middle" font-size="10" fill="#64748B">Operations · Jobs</text>
+
+  <!-- Qdrant -->
+  <rect x="222" y="440" width="166" height="76" rx="8" fill="#1A1830" stroke="#6366F1" stroke-width="1.2"/>
+  <rect x="222" y="440" width="166" height="26" rx="8" fill="#1E1B4B"/>
+  <rect x="222" y="452" width="166" height="14" fill="#1E1B4B"/>
+  <text x="305" y="458" text-anchor="middle" font-size="11" font-weight="700" fill="#A5B4FC">Qdrant</text>
+  <text x="305" y="480" text-anchor="middle" font-size="10" fill="#64748B">Dense Vectors</text>
+  <text x="305" y="496" text-anchor="middle" font-size="10" fill="#64748B">BM25 Sparse Index</text>
+
+  <!-- MinIO -->
+  <rect x="392" y="440" width="166" height="76" rx="8" fill="#1A1830" stroke="#7C3AED" stroke-width="1.2"/>
+  <rect x="392" y="440" width="166" height="26" rx="8" fill="#1E1B4B"/>
+  <rect x="392" y="452" width="166" height="14" fill="#1E1B4B"/>
+  <text x="475" y="458" text-anchor="middle" font-size="11" font-weight="700" fill="#C4B5FD">MinIO</text>
+  <text x="475" y="480" text-anchor="middle" font-size="10" fill="#64748B">Raw Spec Snapshots</text>
+  <text x="475" y="496" text-anchor="middle" font-size="10" fill="#64748B">S3-compatible</text>
+
+  <!-- Redis -->
+  <rect x="562" y="440" width="166" height="76" rx="8" fill="#1A1830" stroke="#2563EB" stroke-width="1.2"/>
+  <rect x="562" y="440" width="166" height="26" rx="8" fill="#172554"/>
+  <rect x="562" y="452" width="166" height="14" fill="#172554"/>
+  <text x="645" y="458" text-anchor="middle" font-size="11" font-weight="700" fill="#93C5FD">Redis</text>
+  <text x="645" y="480" text-anchor="middle" font-size="10" fill="#64748B">Retrieval Cache</text>
+  <text x="645" y="496" text-anchor="middle" font-size="10" fill="#64748B">Distributed Locks</text>
+
+  <!-- Bottom label -->
+  <text x="390" y="530" text-anchor="middle" font-size="10" fill="#334155">All services run locally via Docker Compose · No cloud required</text>
+
+</svg>

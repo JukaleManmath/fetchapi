@@ -1,0 +1,295 @@
+openapi: "3.0.3"
+info:
+  title: Deprecated Operations API
+  description: >
+    Tests that deprecated operations and parameters are correctly preserved
+    during canonical extraction. The ingestion pipeline must record
+    `deprecated: true` on the canonical entity, not silently drop the
+    operation or set it to false.
+  version: "2.0.0"
+paths:
+  /v2/notifications:
+    get:
+      summary: List notifications (v2)
+      description: >
+        Returns notifications for the authenticated user using the v2 schema.
+        This is the current supported endpoint. The v1 endpoint at
+        `/v1/notifications` is deprecated.
+      operationId: listNotificationsV2
+      responses:
+        "200":
+          description: A list of notification objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationV2"
+  /v1/notifications:
+    get:
+      summary: List notifications (v1, deprecated)
+      description: >
+        Returns notifications using the v1 schema. This endpoint is deprecated.
+        Migrate to `/v2/notifications`. Will be removed in the next major release.
+      operationId: listNotificationsV1
+      deprecated: true
+      parameters:
+        - name: unread_only
+          in: query
+          required: false
+          description: When true, returns only unread notifications.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: A list of v1 notification objects.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationV1"
+  /v2/users/{userId}:
+    get:
+      summary: Get a user
+      description: Returns a user profile by ID.
+      operationId: getUser
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user.
+          schema:
+            type: string
+            format: uuid
+        - name: include_legacy_fields
+          in: query
+          required: false
+          deprecated: true
+          description: >
+            Deprecated. Formerly controlled inclusion of v1-era fields.
+            This parameter is now a no-op and will be removed in a future
+            release. Do not use in new integrations.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: User profile returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: User not found.
+  /v1/users/{userId}/feed:
+    get:
+      summary: Get user activity feed (deprecated)
+      description: >
+        Returns a paginated activity feed for the specified user. This
+        endpoint is deprecated. Use `/v2/activity?user_id={userId}` instead.
+      operationId: getUserFeedV1
+      deprecated: true
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: The unique identifier of the user.
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          description: Pagination cursor from the previous response.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Activity feed page.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedPage"
+        "404":
+          description: User not found.
+  /v2/activity:
+    get:
+      summary: Get activity feed (v2)
+      description: Returns a paginated activity feed. Replaces the deprecated v1 user feed endpoint.
+      operationId: getActivityV2
+      parameters:
+        - name: user_id
+          in: query
+          required: false
+          description: Filter activity to a specific user ID.
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque pagination cursor returned in the previous response.
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          required: false
+          description: Number of items per page.
+          schema:
+            type: integer
+            default: 25
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Activity feed results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityPage"
+components:
+  schemas:
+    NotificationV1:
+      type: object
+      description: A v1 notification object. Deprecated — use NotificationV2.
+      deprecated: true
+      properties:
+        id:
+          type: string
+          description: Unique identifier of the notification.
+          example: notif_001
+        text:
+          type: string
+          description: Plain-text notification message.
+          example: "You have a new message."
+        read:
+          type: boolean
+          description: Whether the notification has been read.
+          example: false
+        ts:
+          type: integer
+          description: Unix timestamp of the notification.
+          example: 1700000000
+    NotificationV2:
+      type: object
+      description: A v2 notification object with richer metadata.
+      required:
+        - id
+        - type
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the notification.
+        type:
+          type: string
+          description: Notification category type.
+          enum:
+            - message
+            - mention
+            - system
+            - alert
+        title:
+          type: string
+          description: Short notification title.
+          example: New message from Alice
+        body:
+          type: string
+          description: Full notification body text.
+        read:
+          type: boolean
+          description: Whether the notification has been read by the user.
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the notification was created, in UTC ISO 8601 format.
+    User:
+      type: object
+      description: A user account.
+      required:
+        - id
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the user.
+        email:
+          type: string
+          format: email
+          description: The user's email address.
+        name:
+          type: string
+          description: The user's display name.
+    FeedPage:
+      type: object
+      description: A page of v1 activity feed items. Deprecated.
+      deprecated: true
+      properties:
+        items:
+          type: array
+          description: Activity items on this page.
+          items:
+            type: object
+            properties:
+              event:
+                type: string
+                example: commented
+              timestamp:
+                type: integer
+                example: 1700000000
+        next_cursor:
+          type: string
+          description: Cursor for the next page, or null if this is the last page.
+          nullable: true
+    ActivityPage:
+      type: object
+      description: A page of v2 activity feed items.
+      required:
+        - items
+        - has_more
+      properties:
+        items:
+          type: array
+          description: Activity items on this page.
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+        has_more:
+          type: boolean
+          description: Whether there are more pages after this one.
+        next_cursor:
+          type: string
+          description: Opaque cursor to pass as `cursor` for the next page. Absent when `has_more` is false.
+    ActivityItem:
+      type: object
+      description: A single event in a user's activity feed.
+      required:
+        - id
+        - event_type
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier of the activity event.
+        event_type:
+          type: string
+          description: Type of the event.
+          enum:
+            - comment
+            - like
+            - follow
+            - share
+            - mention
+        actor_id:
+          type: string
+          format: uuid
+          description: ID of the user who performed the action.
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of the event in UTC ISO 8601 format.

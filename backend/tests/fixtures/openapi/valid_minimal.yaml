@@ -1,0 +1,22 @@
+openapi: "3.0.3"
+info:
+  title: Minimal API
+  description: The smallest valid OpenAPI 3.0 spec — used to test happy-path ingestion with minimum required fields.
+  version: "1.0.0"
+paths:
+  /ping:
+    get:
+      summary: Health check
+      description: Returns a simple pong response to confirm the service is running.
+      operationId: ping
+      responses:
+        "200":
+          description: Service is alive.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: pong

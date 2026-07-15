@@ -1,0 +1,453 @@
+openapi: "3.1.0"
+info:
+  title: GitHub REST API
+  description: >
+    A subset of the GitHub REST API covering repository and issue management.
+    The full API is documented at https://docs.github.com/en/rest.
+  version: "2022-11-28"
+  contact:
+    name: GitHub Support
+    url: https://support.github.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.github.com
+    description: GitHub REST API production server
+tags:
+  - name: repos
+    description: Repository operations
+  - name: issues
+    description: Issue tracking operations
+security:
+  - BearerAuth: []
+paths:
+  /repos/{owner}/{repo}:
+    get:
+      tags:
+        - repos
+      summary: Get a repository
+      description: >
+        Returns data about the specified repository. The `parent` and `source`
+        objects are present when the repository is a fork. The `parent` object
+        is the repository this repository was forked from. The `source` object
+        is the ultimate source for the network.
+      operationId: repos/get
+      parameters:
+        - name: owner
+          in: path
+          description: The account owner of the repository. The name is not case sensitive.
+          required: true
+          schema:
+            type: string
+          example: octocat
+        - name: repo
+          in: path
+          description: The name of the repository without the `.git` extension. The name is not case sensitive.
+          required: true
+          schema:
+            type: string
+          example: Hello-World
+      responses:
+        "200":
+          description: Successful response containing the repository details.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Repository"
+              example:
+                id: 1296269
+                name: Hello-World
+                full_name: octocat/Hello-World
+                private: false
+                description: This your first repo!
+                html_url: https://github.com/octocat/Hello-World
+                default_branch: main
+                visibility: public
+        "301":
+          description: Moved permanently. The repository has been renamed or transferred.
+        "403":
+          description: Forbidden. The authenticated user does not have permission to view this repository.
+        "404":
+          description: Not found. The repository does not exist or you do not have access.
+  /repos/{owner}/{repo}/issues:
+    get:
+      tags:
+        - issues
+      summary: List repository issues
+      description: >
+        List issues in a repository. Only open issues will be listed by default.
+        Note: GitHub's REST API considers every pull request an issue, but not
+        every issue is a pull request. For this reason, "Issues" endpoints may
+        return both issues and pull requests in the response.
+      operationId: issues/list-for-repo
+      parameters:
+        - name: owner
+          in: path
+          description: The account owner of the repository. The name is not case sensitive.
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          description: The name of the repository without the `.git` extension.
+          required: true
+          schema:
+            type: string
+        - name: state
+          in: query
+          description: "Indicates the state of the issues to return. Can be `open`, `closed`, or `all`."
+          required: false
+          schema:
+            type: string
+            enum:
+              - open
+              - closed
+              - all
+            default: open
+        - name: per_page
+          in: query
+          description: The number of results per page (max 100). For more information, see "Using pagination in the REST API."
+          required: false
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 100
+        - name: page
+          in: query
+          description: The page number of the results to fetch. For more information, see "Using pagination in the REST API."
+          required: false
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: labels
+          in: query
+          description: A list of comma separated label names. Example: `bug,ui,@high`
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: What to sort results by.
+          required: false
+          schema:
+            type: string
+            enum:
+              - created
+              - updated
+              - comments
+            default: created
+        - name: direction
+          in: query
+          description: The direction to sort the results by.
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+      responses:
+        "200":
+          description: A list of issues matching the query parameters.
+          headers:
+            Link:
+              description: Pagination link header following RFC 5988.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Issue"
+        "404":
+          description: Not found. The repository does not exist.
+        "422":
+          description: Unprocessable entity. Validation failed.
+    post:
+      tags:
+        - issues
+      summary: Create an issue
+      description: >
+        Any user with pull access to a repository can create an issue. If
+        issues are disabled in the repository, the API returns a 410 Gone status.
+      operationId: issues/create
+      parameters:
+        - name: owner
+          in: path
+          description: The account owner of the repository. The name is not case sensitive.
+          required: true
+          schema:
+            type: string
+        - name: repo
+          in: path
+          description: The name of the repository without the `.git` extension.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: The issue to create.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIssueRequest"
+            example:
+              title: Found a bug
+              body: "I'm having a problem with this."
+              labels:
+                - bug
+              assignees:
+                - octocat
+      responses:
+        "201":
+          description: The issue was successfully created.
+          headers:
+            Location:
+              description: The URL of the newly created issue.
+              schema:
+                type: string
+                format: uri
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Issue"
+        "400":
+          description: Bad request. The input data is invalid.
+        "403":
+          description: Forbidden. The authenticated user does not have permission to create issues.
+        "404":
+          description: Not found. The repository does not exist.
+        "410":
+          description: Gone. Issues are disabled in this repository.
+        "422":
+          description: Unprocessable entity. Validation failed or the issue already exists.
+components:
+  schemas:
+    Repository:
+      type: object
+      description: A GitHub repository.
+      required:
+        - id
+        - name
+        - full_name
+        - private
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the repository.
+          example: 1296269
+        name:
+          type: string
+          description: The name of the repository.
+          example: Hello-World
+        full_name:
+          type: string
+          description: The full name of the repository in `owner/repo` format.
+          example: octocat/Hello-World
+        private:
+          type: boolean
+          description: Whether the repository is private.
+          example: false
+        description:
+          type: ["string", "null"]
+          description: A short description of the repository.
+          example: This your first repo!
+        html_url:
+          type: string
+          format: uri
+          description: The URL to the repository on GitHub.
+          example: https://github.com/octocat/Hello-World
+        default_branch:
+          type: string
+          description: The default branch of the repository.
+          example: main
+        visibility:
+          type: string
+          description: The visibility of the repository.
+          enum:
+            - public
+            - private
+            - internal
+          example: public
+        open_issues_count:
+          type: integer
+          description: The number of open issues and pull requests in the repository.
+          example: 0
+        forks_count:
+          type: integer
+          description: The number of forks of this repository.
+          example: 9
+        stargazers_count:
+          type: integer
+          description: The number of stars of this repository.
+          example: 80
+        created_at:
+          type: ["string", "null"]
+          format: date-time
+          description: The date and time the repository was created, in ISO 8601 format.
+        updated_at:
+          type: ["string", "null"]
+          format: date-time
+          description: The date and time the repository was last updated, in ISO 8601 format.
+        owner:
+          $ref: "#/components/schemas/SimpleUser"
+    SimpleUser:
+      type: object
+      description: A GitHub user with minimal fields.
+      required:
+        - login
+        - id
+      properties:
+        login:
+          type: string
+          description: The user's GitHub username.
+          example: octocat
+        id:
+          type: integer
+          description: Unique identifier of the user.
+          example: 1
+        avatar_url:
+          type: string
+          format: uri
+          description: URL to the user's avatar image.
+          example: https://github.com/images/error/octocat_happy.gif
+        html_url:
+          type: string
+          format: uri
+          description: URL to the user's GitHub profile page.
+          example: https://github.com/octocat
+        type:
+          type: string
+          description: The type of account.
+          enum:
+            - User
+            - Organization
+            - Bot
+          example: User
+    Issue:
+      type: object
+      description: Represents an issue in a GitHub repository.
+      required:
+        - id
+        - number
+        - title
+        - state
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the issue.
+          example: 1
+        number:
+          type: integer
+          description: The number of the issue within the repository.
+          example: 1347
+        title:
+          type: string
+          description: The title of the issue.
+          example: Found a bug
+        state:
+          type: string
+          description: State of the issue. Either `open` or `closed`.
+          enum:
+            - open
+            - closed
+          example: open
+        body:
+          type: ["string", "null"]
+          description: The body content of the issue in Markdown format.
+          example: "I'm having a problem with this."
+        html_url:
+          type: string
+          format: uri
+          description: The URL to the issue on GitHub.
+          example: https://github.com/octocat/Hello-World/issues/1347
+        user:
+          $ref: "#/components/schemas/SimpleUser"
+        labels:
+          type: array
+          description: Labels applied to the issue.
+          items:
+            $ref: "#/components/schemas/Label"
+        assignees:
+          type: ["array", "null"]
+          description: Users assigned to the issue.
+          items:
+            $ref: "#/components/schemas/SimpleUser"
+        comments:
+          type: integer
+          description: The number of comments on the issue.
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          description: The date and time the issue was created, in ISO 8601 format.
+        updated_at:
+          type: string
+          format: date-time
+          description: The date and time the issue was last updated, in ISO 8601 format.
+        closed_at:
+          type: ["string", "null"]
+          format: date-time
+          description: The date and time the issue was closed, in ISO 8601 format. Null if not closed.
+    Label:
+      type: object
+      description: A label attached to an issue or pull request.
+      properties:
+        id:
+          type: integer
+          description: Unique identifier of the label.
+          example: 208045946
+        name:
+          type: string
+          description: The name of the label.
+          example: bug
+        description:
+          type: ["string", "null"]
+          description: A short description of the label.
+          example: Something isn't working
+        color:
+          type: string
+          description: A 6-character hex color code, without the leading `#`.
+          example: ee0701
+    CreateIssueRequest:
+      type: object
+      description: Request body for creating a new issue.
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: The title of the issue.
+          example: Found a bug
+        body:
+          type: string
+          description: The contents of the issue body in Markdown format.
+          example: "I'm having a problem with this."
+        assignees:
+          type: array
+          description: Logins for users to assign to this issue. Only users with push access can set assignees for new issues.
+          items:
+            type: string
+          example:
+            - octocat
+        labels:
+          type: array
+          description: Labels to associate with this issue. Only users with push access can set labels for new issues.
+          items:
+            type: string
+          example:
+            - bug
+        milestone:
+          type: ["integer", "null"]
+          description: The number of the milestone to associate this issue with. Only users with push access can set the milestone for new issues.
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        GitHub personal access token or OAuth token. Pass the token in the
+        Authorization header as `Bearer <token>`.

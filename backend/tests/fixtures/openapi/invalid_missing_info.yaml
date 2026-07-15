@@ -1,0 +1,14 @@
+# Invalid OpenAPI spec — missing the required `info` field.
+# The OpenAPI 3.0 specification requires `info` at the root level.
+# The ingestion validator must reject this document with a clear error
+# indicating that `info` is required.
+openapi: "3.0.3"
+paths:
+  /ping:
+    get:
+      summary: Health check
+      description: Returns pong.
+      operationId: ping
+      responses:
+        "200":
+          description: OK.
