@@ -366,3 +366,100 @@ class ErrorDefinitionModel(Base):
     revision: Mapped["SourceRevisionModel"] = relationship(back_populates="error_definitions")
 
     __table_args__ = (Index("ix_error_definitions_revision", "revision_id"),)
+
+
+# ── Embedding profile ─────────────────────────────────────────────────────────
+
+
+class EmbeddingProfileModel(Base):
+    __tablename__ = "embedding_profiles"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    # Human-readable version string, e.g. "v1". Unique — one profile per version.
+    version: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+    dense_model_id: Mapped[str] = mapped_column(Text, nullable=False)
+    dense_dimension: Mapped[int] = mapped_column(Integer, nullable=False)
+    sparse_model_id: Mapped[str] = mapped_column(Text, nullable=False)
+    collection_name: Mapped[str] = mapped_column(Text, nullable=False)
+    distance_metric: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    chunks: Mapped[list["ChunkModel"]] = relationship(back_populates="embedding_profile")
+
+
+# ── Chunks ────────────────────────────────────────────────────────────────────
+
+
+class ChunkModel(Base):
+    __tablename__ = "chunks"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    revision_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("source_revisions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    embedding_profile_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("embedding_profiles.id"),
+        nullable=False,
+    )
+    chunk_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    # SHA-256(text + profile_version) — idempotency key for re-ingestion.
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Equals id — deterministic Qdrant point ID, stored explicitly for clarity.
+    qdrant_point_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    # Denormalized payload fields mirrored in Qdrant for filtering.
+    method: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    path: Mapped[str | None] = mapped_column(Text, nullable=True)
+    operation_id_str: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
+    status_codes: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
+    api_version: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    language: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    embedding_profile: Mapped["EmbeddingProfileModel"] = relationship(back_populates="chunks")
+
+    __table_args__ = (
+        UniqueConstraint("revision_id", "content_hash", name="uq_chunks_revision_content_hash"),
+        Index("ix_chunks_revision", "revision_id"),
+        Index("ix_chunks_entity", "entity_type", "entity_id"),
+        Index("ix_chunks_workspace", "workspace_id"),
+    )
+
+
+# ── Chunk relations ───────────────────────────────────────────────────────────
+
+
+class ChunkRelationModel(Base):
+    __tablename__ = "chunk_relations"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    revision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    from_chunk_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("chunks.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    to_chunk_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("chunks.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    relation_type: Mapped[str] = mapped_column(String(50), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "from_chunk_id", "to_chunk_id", "relation_type",
+            name="uq_chunk_relations_edge",
+        ),
+        Index("ix_chunk_relations_from", "from_chunk_id"),
+        Index("ix_chunk_relations_revision", "revision_id"),
+    )

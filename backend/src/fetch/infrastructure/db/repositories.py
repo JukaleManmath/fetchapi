@@ -5,10 +5,10 @@ ORM models are never returned — they are mapped to domain entities here.
 All methods receive an AsyncSession injected from the caller.
 """
 
-import json
 import logging
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -17,22 +17,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fetch.domain.entities import (
     ApiExample,
     ApiOperation,
-    ApiParameter,
-    ApiRequestBody,
-    ApiResponse,
     ApiSchema,
     ApiServer,
     ApiSource,
     AuthScheme,
+    Chunk,
+    ChunkRelation,
     ErrorDefinition,
     IngestionJob,
     SourceRevision,
 )
 from fetch.domain.enums import (
     AuthSchemeType,
+    ChunkType,
     HttpMethod,
     IngestionStage,
-    ParameterLocation,
     RevisionStatus,
     SourceType,
 )
@@ -46,6 +45,9 @@ from fetch.infrastructure.db.models import (
     ApiServerModel,
     ApiSourceModel,
     AuthSchemeModel,
+    ChunkModel,
+    ChunkRelationModel,
+    EmbeddingProfileModel,
     ErrorDefinitionModel,
     IngestionJobModel,
     SourceRevisionModel,
@@ -606,3 +608,156 @@ class PgErrorRepository:
                 .on_conflict_do_nothing()
             )
             await self._session.execute(stmt)
+
+
+# ── EmbeddingProfileRepository ────────────────────────────────────────────────
+
+
+@dataclass
+class EmbeddingProfileRecord:
+    """Flat record returned from the DB — avoids crossing ORM objects into app layer."""
+
+    id: UUID
+    version: str
+    dense_model_id: str
+    dense_dimension: int
+    sparse_model_id: str
+    collection_name: str
+    distance_metric: str
+    created_at: datetime
+
+
+def _map_embedding_profile(row: EmbeddingProfileModel) -> EmbeddingProfileRecord:
+    return EmbeddingProfileRecord(
+        id=row.id,
+        version=row.version,
+        dense_model_id=row.dense_model_id,
+        dense_dimension=row.dense_dimension,
+        sparse_model_id=row.sparse_model_id,
+        collection_name=row.collection_name,
+        distance_metric=row.distance_metric,
+        created_at=row.created_at,
+    )
+
+
+class PgEmbeddingProfileRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_version(self, version: str) -> EmbeddingProfileRecord | None:
+        result = await self._session.execute(
+            select(EmbeddingProfileModel).where(EmbeddingProfileModel.version == version)
+        )
+        row = result.scalar_one_or_none()
+        return _map_embedding_profile(row) if row else None
+
+    async def save(self, record: EmbeddingProfileRecord) -> None:
+        """Insert if not present; skip if version already exists (immutable)."""
+        stmt = (
+            pg_insert(EmbeddingProfileModel)
+            .values(
+                id=record.id,
+                version=record.version,
+                dense_model_id=record.dense_model_id,
+                dense_dimension=record.dense_dimension,
+                sparse_model_id=record.sparse_model_id,
+                collection_name=record.collection_name,
+                distance_metric=record.distance_metric,
+                created_at=record.created_at,
+            )
+            .on_conflict_do_nothing(constraint="uq_embedding_profiles_version")
+        )
+        await self._session.execute(stmt)
+
+
+# ── ChunkRepository ───────────────────────────────────────────────────────────
+
+
+class PgChunkRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save_many(self, chunks: list[Chunk]) -> None:
+        """Bulk insert chunks. On conflict on (revision_id, content_hash), skip."""
+        for chunk in chunks:
+            stmt = (
+                pg_insert(ChunkModel)
+                .values(
+                    id=chunk.id,
+                    revision_id=chunk.revision_id,
+                    workspace_id=chunk.workspace_id,
+                    source_id=chunk.source_id,
+                    embedding_profile_id=chunk.embedding_profile_version,  # stored as profile UUID
+                    chunk_type=chunk.chunk_type.value,
+                    entity_type=chunk.entity_type,
+                    entity_id=chunk.entity_id,
+                    title=chunk.title,
+                    text=chunk.text,
+                    content_hash=chunk.content_hash,
+                    qdrant_point_id=chunk.qdrant_point_id,
+                    method=chunk.method,
+                    path=chunk.path,
+                    operation_id_str=chunk.operation_id,
+                    tags=chunk.tags,
+                    status_codes=chunk.status_codes,
+                    api_version=chunk.api_version,
+                    source_pointer=chunk.source_pointer,
+                    language=chunk.language,
+                )
+                .on_conflict_do_nothing(constraint="uq_chunks_revision_content_hash")
+            )
+            await self._session.execute(stmt)
+
+    async def save_many_relations(self, relations: list[ChunkRelation]) -> None:
+        """Bulk insert chunk relations. On conflict on (from, to, type), skip."""
+        for rel in relations:
+            stmt = (
+                pg_insert(ChunkRelationModel)
+                .values(
+                    id=rel.id,
+                    revision_id=rel.revision_id,
+                    from_chunk_id=rel.from_chunk_id,
+                    to_chunk_id=rel.to_chunk_id,
+                    relation_type=rel.relation_type.value,
+                )
+                .on_conflict_do_nothing(constraint="uq_chunk_relations_edge")
+            )
+            await self._session.execute(stmt)
+
+    async def list_by_revision(self, revision_id: UUID) -> list[Chunk]:
+        result = await self._session.execute(
+            select(ChunkModel).where(ChunkModel.revision_id == revision_id)
+        )
+        return [_map_chunk(r) for r in result.scalars().all()]
+
+    async def count_by_revision(self, revision_id: UUID) -> int:
+        from sqlalchemy import func
+        result = await self._session.execute(
+            select(func.count()).where(ChunkModel.revision_id == revision_id)
+        )
+        return result.scalar_one()
+
+
+def _map_chunk(row: ChunkModel) -> Chunk:
+    return Chunk(
+        id=row.id,
+        revision_id=row.revision_id,
+        workspace_id=row.workspace_id,
+        source_id=row.source_id,
+        chunk_type=ChunkType(row.chunk_type),
+        entity_type=row.entity_type,
+        entity_id=row.entity_id,
+        title=row.title,
+        text=row.text,
+        content_hash=row.content_hash,
+        embedding_profile_version=str(row.embedding_profile_id),
+        qdrant_point_id=row.qdrant_point_id,
+        method=row.method,
+        path=row.path,
+        operation_id=row.operation_id_str,
+        tags=list(row.tags or []),
+        status_codes=list(row.status_codes or []),
+        api_version=row.api_version,
+        source_pointer=row.source_pointer,
+        language=row.language,
+    )

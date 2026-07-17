@@ -12,7 +12,6 @@ The caller (CreateSourceService) can retry by calling start_ingestion again,
 which creates a new job record and starts a new task.
 """
 
-import asyncio
 import hashlib
 import logging
 from datetime import UTC, datetime
@@ -21,11 +20,12 @@ from uuid import UUID
 import httpx
 
 from fetch.config import get_settings
-from fetch.domain.entities import IngestionJob, SourceRevision
+from fetch.domain.entities import Chunk
 from fetch.domain.enums import IngestionStage, RevisionStatus
 from fetch.domain.errors import IngestionError
 from fetch.infrastructure.db.repositories import (
     PgAuthSchemeRepository,
+    PgChunkRepository,
     PgErrorRepository,
     PgExampleRepository,
     PgJobRepository,
@@ -35,6 +35,18 @@ from fetch.infrastructure.db.repositories import (
     PgServerRepository,
 )
 from fetch.infrastructure.db.session import get_session
+from fetch.infrastructure.embeddings.chunker import (
+    build_auth_chunk,
+    build_chunk_relations,
+    build_error_chunk,
+    build_operation_chunk,
+    build_schema_chunk,
+)
+from fetch.infrastructure.embeddings.profile import (
+    EmbeddingProfile,
+    get_or_create_profile,
+)
+from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
 from fetch.infrastructure.openapi.extractor import (
     extract_api_title,
     extract_api_version,
@@ -46,6 +58,7 @@ from fetch.infrastructure.openapi.extractor import (
     extract_servers,
 )
 from fetch.infrastructure.openapi.validator import load_and_resolve
+from fetch.infrastructure.qdrant.repository import QdrantRepository
 from fetch.infrastructure.storage.minio import MinioStorageProvider
 
 logger = logging.getLogger(__name__)
@@ -190,7 +203,7 @@ async def _run_pipeline(
     # ── PARSING: load YAML/JSON safely ───────────────────────────────────────
     await _update_job_stage(job_id, IngestionStage.PARSING)
 
-    resolved_doc, openapi_version = await load_and_resolve(
+    resolved_doc, _openapi_version = await load_and_resolve(
         raw_content,
         source_url=source_url,
         max_aliases=settings.worker.ingestion_max_aliases,
@@ -247,8 +260,138 @@ async def _run_pipeline(
         revision.api_title = api_title
         await rev_repo.save(revision)
 
+    # ── CHUNKING: build text projections from canonical entities ─────────────
+    await _update_job_stage(job_id, IngestionStage.CHUNKING)
+
+    async with get_session() as session:
+        profile = await get_or_create_profile(session)
+
+    # Build auth and schema chunks first — needed for relation building.
+    auth_chunks = [
+        build_auth_chunk(a, api_version, source_id, workspace_id, profile)
+        for a in auth_schemes
+    ]
+    schema_chunks = [
+        build_schema_chunk(s, api_version, source_id, workspace_id, profile)
+        for s in schemas
+    ]
+    error_chunks = [
+        build_error_chunk(e, api_version, source_id, workspace_id, profile)
+        for e in error_definitions
+    ]
+
+    # Index by entity_id / name for O(1) relation lookup.
+    schema_chunks_by_id = {c.entity_id: c for c in schema_chunks}
+    auth_chunks_by_name = {
+        a.name: c for a, c in zip(auth_schemes, auth_chunks, strict=True)
+    }
+    # Map error definition -> its chunk for per-operation filtering below.
+    error_def_to_chunk = {
+        e.id: c for e, c in zip(error_definitions, error_chunks, strict=True)
+    }
+
+    op_chunks = []
+    all_relations = []
+    for op in operations:
+        auth_names = [
+            name for req in op.security_requirements for name in req
+        ]
+        op_chunk = build_operation_chunk(
+            op, auth_names, api_version, source_id, workspace_id, profile
+        )
+        op_chunks.append(op_chunk)
+
+        # Only include error chunks that belong to this operation.
+        op_error_chunks = {
+            e.id: error_def_to_chunk[e.id]
+            for e in error_definitions
+            if e.operation_id == op.id and e.id in error_def_to_chunk
+        }
+
+        relations = build_chunk_relations(
+            op_chunk=op_chunk,
+            operation=op,
+            schema_chunks_by_entity_id=schema_chunks_by_id,
+            auth_chunks_by_name=auth_chunks_by_name,
+            error_chunks_by_entity_id=op_error_chunks,
+        )
+        all_relations.extend(relations)
+
+    all_chunks: list[Chunk] = op_chunks + schema_chunks + auth_chunks + error_chunks
+
+    async with get_session() as session:
+        chunk_repo = PgChunkRepository(session)
+        await chunk_repo.save_many(all_chunks)
+        await chunk_repo.save_many_relations(all_relations)
+
+        rev_repo = PgRevisionRepository(session)
+        revision = await rev_repo.get(revision_id)
+        if revision is None:
+            raise IngestionError(f"Revision {revision_id} not found after chunking.")
+        revision.expected_chunk_count = len(all_chunks)
+        await rev_repo.save(revision)
+
+    logger.info(
+        "ingestion_chunking_complete",
+        extra={
+            "revision_id": str(revision_id),
+            "op_chunks": len(op_chunks),
+            "schema_chunks": len(schema_chunks),
+            "auth_chunks": len(auth_chunks),
+            "error_chunks": len(error_chunks),
+            "relations": len(all_relations),
+        },
+    )
+
+    # ── EMBEDDING: generate dense vectors via provider ────────────────────────
+    await _update_job_stage(job_id, IngestionStage.EMBEDDING)
+
+    texts = [c.text for c in all_chunks]
+    vectors = await _embed_in_batches(texts, profile, settings)
+
+    # ── INDEXING: upsert into Qdrant ──────────────────────────────────────────
+    await _update_job_stage(job_id, IngestionStage.INDEXING)
+
+    qdrant = QdrantRepository()
+    await qdrant.upsert_chunks(
+        all_chunks, vectors, batch_size=settings.embeddings.batch_size
+    )
+
+    logger.info(
+        "ingestion_indexing_complete",
+        extra={"revision_id": str(revision_id), "points_upserted": len(all_chunks)},
+    )
+
+    # ── VERIFYING: confirm point count matches expected ───────────────────────
+    await _update_job_stage(job_id, IngestionStage.VERIFYING)
+
+    actual_count = await qdrant.count_points(revision_id, workspace_id)
+
+    async with get_session() as session:
+        rev_repo = PgRevisionRepository(session)
+        revision = await rev_repo.get(revision_id)
+        if revision is None:
+            raise IngestionError(f"Revision {revision_id} not found after indexing.")
+        revision.actual_chunk_count = actual_count
+        await rev_repo.save(revision)
+
+    expected_count = len(all_chunks)
+    if actual_count != expected_count:
+        raise IngestionError(
+            f"Qdrant point count mismatch: expected {expected_count}, got {actual_count}. "
+            "Revision not activated."
+        )
+
+    logger.info(
+        "ingestion_verification_passed",
+        extra={
+            "revision_id": str(revision_id),
+            "expected": expected_count,
+            "actual": actual_count,
+        },
+    )
+
     # ── ACTIVE: atomic revision activation ───────────────────────────────────
-    # (CHUNKING, EMBEDDING, INDEXING, VERIFYING are Phase 2 — skip for now)
     async with get_session() as session:
         rev_repo = PgRevisionRepository(session)
         await rev_repo.activate(revision_id)
@@ -264,5 +407,42 @@ async def _run_pipeline(
             "api_title": api_title,
             "api_version": api_version,
             "operations": len(operations),
+            "chunks": len(all_chunks),
         },
     )
+
+
+async def _embed_in_batches(
+    texts: list[str],
+    profile: EmbeddingProfile,
+    settings: object,
+) -> list[list[float]]:
+    """Embed all texts in bounded batches using the configured provider.
+
+    Returns a flat list of dense vectors in the same order as texts.
+    CPU-bound reranking is excluded here — this is I/O-bound embedding only.
+    """
+    provider = NvidiaNimProvider(
+        api_key=settings.embeddings.api_key.get_secret_value(),
+        base_url=settings.embeddings.base_url,
+    )
+    batch_size: int = settings.embeddings.batch_size
+    all_vectors: list[list[float]] = []
+
+    for batch_start in range(0, len(texts), batch_size):
+        batch = texts[batch_start : batch_start + batch_size]
+        results = await provider.embed(batch, model_id=profile.dense_model_id)
+        # Results are returned in index order.
+        sorted_results = sorted(results, key=lambda r: r.index)
+        all_vectors.extend(r.vector for r in sorted_results)
+
+        logger.debug(
+            "embedding_batch_complete",
+            extra={
+                "batch_start": batch_start,
+                "batch_size": len(batch),
+                "model_id": profile.dense_model_id,
+            },
+        )
+
+    return all_vectors

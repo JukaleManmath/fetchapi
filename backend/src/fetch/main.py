@@ -15,12 +15,17 @@ from fastapi import FastAPI
 from fetch.api.errors import register_error_handlers
 from fetch.api.v1.operations import router as operations_router
 from fetch.api.v1.sources import router as sources_router
+from fetch.config import get_settings
 from fetch.infrastructure.db.session import close_db, init_db
+from fetch.infrastructure.qdrant.repository import QdrantRepository
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     init_db()
+    settings = get_settings()
+    qdrant = QdrantRepository()
+    await qdrant.ensure_collection(dense_dimension=settings.embeddings.dimension)
     yield
     await close_db()
 

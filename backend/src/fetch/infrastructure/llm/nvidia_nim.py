@@ -149,6 +149,7 @@ class NvidiaNimProvider:
                 model=model_id,
                 input=texts,
                 encoding_format="float",
+                extra_body={"input_type": "passage", "truncate": "END"},
             )
             return [
                 EmbeddingResult(index=item.index, vector=item.embedding)
