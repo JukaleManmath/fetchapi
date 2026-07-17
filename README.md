@@ -4,16 +4,14 @@
 
 # FetchAPI
 
-**Self-hosted API intelligence for AI coding assistants.**
+Give your AI coding assistant accurate, citation-backed knowledge of any API - no hallucinations, no pasted docs, no cloud subscription.
 
-Give your AI assistant accurate, citation-backed knowledge of any API - without hallucinations, without pasting docs into context, without a cloud subscription.
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0%20%7C%203.1-6BA539?logo=openapiinitiative&logoColor=white)](https://www.openapis.org/)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-blueviolet)](https://modelcontextprotocol.io/)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-7C3AED)](https://modelcontextprotocol.io/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 [Getting Started](#getting-started) · [MCP Tools](#mcp-tools) · [HTTP API](#http-api) · [Architecture](#architecture) · [Roadmap](#roadmap)
 
@@ -21,30 +19,19 @@ Give your AI assistant accurate, citation-backed knowledge of any API - without 
 
 ---
 
-## The problem
+## What It Covers
 
-AI coding assistants hallucinate API details. They invent endpoints that don't exist, get parameter names wrong, and mix up auth flows. The usual workaround - pasting docs into context - is slow, burns tokens, and still produces ungrounded answers.
-
-## The solution
-
-FetchAPI ingests your OpenAPI spec, builds a structured canonical model, and serves it through an MCP server. Your AI assistant queries real spec data instead of guessing from training memory. Every answer is grounded and cites the exact spec section.
-
-```
-docker compose up
-# upload your OpenAPI spec
-# add one line to your editor's MCP config
-# done — your AI assistant now knows the API
-```
-
-**Works with:** Cursor · Claude Desktop · VS Code + Cline · any MCP-compatible editor
-
-**No cloud. No subscription. No data leaving your machine.**
+- **OpenAPI Ingestion**: Upload a spec file or URL - FetchAPI parses, validates, and normalizes it into a versioned canonical model.
+- **Hybrid Retrieval**: Dense vector search, BM25 sparse index, RRF fusion, and cross-encoder reranking over operations, schemas, and auth schemes.
+- **Grounded Q&A**: Every answer cites the exact spec section it came from. No hallucinated endpoints, no invented parameter names.
+- **MCP Server**: Nine structured tools your AI coding assistant can call directly from Cursor, Claude Desktop, or VS Code + Cline.
+- **Revision Lifecycle**: Re-ingest anytime - idempotent by design, with atomic activation so queries never see a partial index.
 
 ---
 
 ## Demo
 
-> **Note:** Demo recording coming in Phase 8 (Next.js UI). The HTTP API and MCP server are fully functional today.
+> Demo recording coming in Phase 8 (Next.js UI). The HTTP API and MCP server are fully functional today.
 
 ```bash
 # Upload Stripe's OpenAPI spec
@@ -59,22 +46,7 @@ curl -X POST http://localhost:8000/v1/sources/openapi/url \
 
 ---
 
-## What FetchAPI can do
-
-| Capability | Description |
-|---|---|
-| **Documentation Q&A** | Ask anything about an API - answers cite the exact spec section |
-| **Endpoint lookup** | Find operations by method, path, tag, or natural language |
-| **Schema lookup** | Inspect request/response schemas with full property details |
-| **Auth guidance** | Get the exact auth scheme, scopes, and header names for any operation |
-| **Integration generation** | Generate working code in Python, TypeScript, or Java for any endpoint |
-| **Request validation** | Paste a curl command or HTTP request - get validation errors against the spec |
-| **Error diagnosis** | Explain a status code or provider error code in context |
-| **Version comparison** | Diff two revisions of the same API spec |
-
----
-
-## Getting started
+## Getting Started
 
 ### Prerequisites
 
@@ -193,7 +165,7 @@ Your AI assistant now has structured knowledge of every API you've uploaded.
 
 ---
 
-## MCP tools
+## MCP Tools
 
 Nine focused tools your AI assistant can call:
 
@@ -245,21 +217,21 @@ Interactive docs: [`http://localhost:8000/docs`](http://localhost:8000/docs)
 </div>
 
 **Storage responsibilities:**
-- **PostgreSQL** - source of truth for sources, revisions, canonical entities (operations, schemas, auth), ingestion jobs, and query traces
+- **PostgreSQL** - source of truth for sources, revisions, canonical entities, ingestion jobs, and query traces
 - **Qdrant** - dense vector and BM25 sparse index for hybrid retrieval with RRF fusion and cross-encoder reranking
 - **MinIO** - immutable raw spec snapshots (S3-compatible, runs fully locally via Docker)
 - **Redis** - retrieval and answer cache, distributed locks for stampede control
 
 ---
 
-## Ingestion pipeline
+## Ingestion Pipeline
 
 Every uploaded spec goes through a durable background pipeline:
 
 ```
-QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING → ACTIVE
-                                                                         ↓
-                                                                    (or FAILED)
+QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING → CHUNKING → EMBEDDING → INDEXING → VERIFYING → ACTIVE
+                                                                                                                        ↓
+                                                                                                                   (or FAILED)
 ```
 
 | Stage | What happens |
@@ -269,6 +241,10 @@ QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING 
 | **PARSING** | Safe YAML/JSON load with alias expansion limit; `$ref` resolution with SSRF protection and cycle detection |
 | **VALIDATING** | OpenAPI 3.0/3.1 schema validation via `openapi-spec-validator` |
 | **NORMALIZING** | Extract canonical entities: operations, schemas, auth schemes, servers, examples, error definitions |
+| **CHUNKING** | Build self-contained text projections per entity; save chunks and typed relations to PostgreSQL |
+| **EMBEDDING** | Embed all chunk texts via NVIDIA NIM in batches; one dense vector per chunk |
+| **INDEXING** | Upsert chunks into Qdrant with deterministic point IDs; BM25 text index on chunk text field |
+| **VERIFYING** | Count Qdrant points for this revision - must match expected chunk count before activation |
 | **ACTIVE** | Atomic revision activation - previous revision marked superseded |
 
 > **Idempotent by design.** Re-ingesting the same spec produces the same content hash and zero duplicate rows. A failed revision never replaces an active one.
@@ -277,7 +253,7 @@ QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING 
 
 ## Security
 
-- **SSRF protection** - external `$ref` URLs and redirect targets are checked against blocked IP ranges (loopback, private RFC-1918, link-local `169.254.x.x`, IPv6 unique local) before fetching
+- **SSRF protection** - external `$ref` URLs and redirect targets are checked against blocked IP ranges (loopback, private RFC-1918, link-local, IPv6 unique local) before fetching
 - **DoS prevention** - YAML alias expansion is limited to 100 expansions per document (configurable), enforced on the raw node tree before construction
 - **External ref limits** - max 3 hops, 1 MB per document, 10-second timeout
 - **No code execution** - generated code is never executed on the host
@@ -285,7 +261,7 @@ QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING 
 
 ---
 
-## Supported OpenAPI versions
+## Supported OpenAPI Versions
 
 | Version | Status |
 |---|---|
@@ -330,8 +306,8 @@ LLM_API_KEY=your-key
 LLM_MODEL_ID=meta/llama-3.1-70b-instruct
 
 # Embeddings
-EMBEDDINGS_MODEL_ID=nvidia/nv-embed-v2
-EMBEDDINGS_DIMENSION=4096
+EMBEDDINGS_MODEL_ID=nvidia/nv-embedqa-e5-v5
+EMBEDDINGS_DIMENSION=1024
 
 # Ingestion limits
 WORKER_INGESTION_MAX_ALIASES=100   # YAML alias expansion limit
@@ -363,8 +339,8 @@ make run            # start FastAPI with hot reload at localhost:8000
 ### Tests
 
 ```bash
-make test-unit          # unit tests — no infrastructure required, runs in ~1s
-make test-integration   # integration tests — requires running Docker stack
+make test-unit          # unit tests - no infrastructure required, runs in ~1s
+make test-integration   # integration tests - requires running Docker stack
 make test               # all tests
 make test-cov           # with coverage report
 ```
@@ -388,7 +364,7 @@ make reset-db       # wipe all volumes and start fresh (destructive)
 
 ---
 
-## Project structure
+## Project Structure
 
 ```
 fetchapi/
@@ -396,20 +372,20 @@ fetchapi/
 │   ├── src/fetch/
 │   │   ├── api/v1/           # HTTP route handlers
 │   │   ├── application/      # Use cases (ingestion, sources, retrieval, queries)
-│   │   ├── domain/           # Entities, enums, errors, protocols — no framework deps
+│   │   ├── domain/           # Entities, enums, errors, protocols - no framework deps
 │   │   ├── infrastructure/   # PostgreSQL, Qdrant, Redis, MinIO, OpenAPI parsing, LLM
 │   │   ├── mcp/              # MCP server and 9 tools
 │   │   ├── workers/          # Reserved for future background work
 │   │   └── config.py         # Pydantic settings with nested groups
 │   ├── migrations/           # Alembic migrations (one per schema change)
 │   └── tests/
-│       ├── unit/             # Pure logic tests — no infrastructure
+│       ├── unit/             # Pure logic tests - no infrastructure
 │       ├── integration/      # End-to-end tests against real stack
 │       └── fixtures/         # Edge-case OpenAPI specs (recursive, nullable, invalid, etc.)
 ├── examples/
-│   ├── petstore/             # OpenAPI 3.0.4  — 19 operations
-│   ├── github/               # GHES 3.12      — 962 operations, 765 schemas
-│   └── stripe/               # Stripe API     — 587 operations, 1,431 schemas
+│   ├── petstore/             # OpenAPI 3.0.4  - 19 operations
+│   ├── github/               # GHES 3.12      - 962 operations, 765 schemas
+│   └── stripe/               # Stripe API     - 587 operations, 1,431 schemas
 ├── frontend/                 # Next.js web UI (Phase 8)
 ├── infra/
 │   └── compose.yaml          # PostgreSQL · Qdrant · Redis · MinIO · FastAPI
@@ -424,7 +400,7 @@ fetchapi/
 
 - [x] **Phase 0** - Foundation: domain model, provider protocols, configuration, fixture corpus
 - [x] **Phase 1** - OpenAPI ingestion: parsing, validation, canonical extraction, job state machine, revision lifecycle
-- [ ] **Phase 2** - Chunking and vector indexing: operation/schema/auth chunk projections, Qdrant upsert, BM25 indexing
+- [x] **Phase 2** - Chunking and vector indexing: operation/schema/auth chunk projections, Qdrant upsert, BM25 indexing
 - [ ] **Phase 3** - Hybrid retrieval: dense + sparse + RRF fusion + cross-encoder reranking + relationship expansion
 - [ ] **Phase 4** - Grounded Q&A: streamed answers with deterministic citation mapping, support status, abstention
 - [ ] **Phase 5** - Integration code generation: Python, TypeScript, Java with spec-backed validation
