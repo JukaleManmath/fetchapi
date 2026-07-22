@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------------------------------------------------
+   Base
+   ---------------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #FFFFFF;
+  color: #09090B;
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+}
+
+/* -------------------------------------------------------------------------
+   Scrollbar
+   ---------------------------------------------------------------------- */
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #D4D4D8;
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+
+/* -------------------------------------------------------------------------
+   Focus & selection
+   ---------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid #09090B;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(9, 9, 11, 0.12);
+}
+
+/* -------------------------------------------------------------------------
+   Typography
+   ---------------------------------------------------------------------- */
+
+code, kbd, pre, .font-mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* -------------------------------------------------------------------------
+   3D Perspective root
+   ---------------------------------------------------------------------- */
+
+.perspective {
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* -------------------------------------------------------------------------
+   Scroll-driven 3D reveal
+   Supported: Chrome 115+, Edge 115+, Safari 18+
+   JS IntersectionObserver fallback applied via .reveal class
+   ---------------------------------------------------------------------- */
+
+@supports (animation-timeline: scroll()) {
+  .scroll-reveal {
+    animation: scroll-reveal-3d linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 25%;
+  }
+}
+
+@keyframes scroll-reveal-3d {
+  from {
+    opacity: 0;
+    transform: perspective(600px) rotateX(18deg) translateY(32px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(600px) rotateX(0deg) translateY(0) scale(1);
+  }
+}
+
+/* Fallback for browsers without animation-timeline */
+.reveal-ready {
+  opacity: 0;
+  transform: perspective(600px) rotateX(18deg) translateY(32px) scale(0.97);
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.reveal-ready.in-view {
+  opacity: 1;
+  transform: perspective(600px) rotateX(0deg) translateY(0) scale(1);
+}
+
+/* Staggered children */
+.stagger > *:nth-child(1) { transition-delay: 0ms; }
+.stagger > *:nth-child(2) { transition-delay: 60ms; }
+.stagger > *:nth-child(3) { transition-delay: 120ms; }
+.stagger > *:nth-child(4) { transition-delay: 180ms; }
+.stagger > *:nth-child(5) { transition-delay: 240ms; }
+.stagger > *:nth-child(6) { transition-delay: 300ms; }
+.stagger > *:nth-child(n+7) { transition-delay: 360ms; }
+
+/* -------------------------------------------------------------------------
+   3D Tilt card (JS-driven via inline style)
+   ---------------------------------------------------------------------- */
+
+.tilt-card {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  transform-style: preserve-3d;
+}
+
+.tilt-card:hover {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0,0,0,0.10);
+}
+
+/* -------------------------------------------------------------------------
+   Grid dot background
+   ---------------------------------------------------------------------- */
+
+.dot-grid {
+  background-image: radial-gradient(circle, #D4D4D8 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* -------------------------------------------------------------------------
+   Shimmer skeleton
+   ---------------------------------------------------------------------- */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #F4F4F5 25%,
+    #E4E4E7 50%,
+    #F4F4F5 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite linear;
+}
+
+/* -------------------------------------------------------------------------
+   Reduced motion
+   ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

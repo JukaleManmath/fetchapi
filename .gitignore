@@ -23,6 +23,7 @@ pip-log.txt
 .coverage
 htmlcov/
 *.log
+.claude/
 
 # Environment
 .env
