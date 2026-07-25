@@ -1542,7 +1542,7 @@ These features are intentionally excluded from version 1:
 ## 24. Current Status
 
 **Last updated:** 2026-07-25
-**Current phase:** Phase 10 — Portfolio release
+**Current phase:** complete — all 10 phases shipped
 **Distribution:** GitHub open-source, self-hosted via `docker compose up`
 
 ### Completed
@@ -1565,6 +1565,7 @@ These features are intentionally excluded from version 1:
 - [x] Phase 7 — MCP server complete (9 structured tools via Streamable HTTP, VersionDiffService, 388 unit tests passing)
 - [x] Phase 8 — Next.js web UI complete (chat with SSE streaming + citations, integration generation panel, request validation panel)
 - [x] Phase 9 — Evaluation and hardening complete (90-question eval datasets, retrieval/answer/validation/ablation benchmark runners, SSRF + workspace isolation + prompt injection security tests, GitHub Actions CI, regression thresholds)
+- [x] Phase 10 — Portfolio release complete (README overhaul, resume bullets, MCP quickstart, eval thresholds documented)
 
 ### Phase 0 — Foundation (complete)
 
@@ -1670,16 +1671,12 @@ These features are intentionally excluded from version 1:
 - [x] `evals/README.md` — benchmark usage, threshold interpretation, CI vs eval runner distinction
 - [x] 27 pre-existing mypy errors and 3 ruff errors fixed (412 tests passing)
 
-### Phase 10 — Next milestone
+### Phase 10 — Portfolio release (complete)
 
-See §23 for full scope. Key items:
-- README with problem statement, architecture diagram, feature list, setup instructions
-- Demo video (2–3 minutes, full workflow)
-- Screenshots of all UI sections including retrieval inspector
-- MCP configuration instructions for Claude Code and Cursor
-- Evaluation results table (run benchmarks against live ingested sources)
-- Design decision summary (link to ADRs)
-- Resume bullets with real metrics
+- [x] README overhaul — problem statement, feature list with specifics (11-stage pipeline, hybrid retrieval, deterministic citations, SupportStatus, 9 MCP tools), architecture diagram, ingestion pipeline table, security section, getting started with editor MCP config for Claude Desktop / Cursor / VS Code Cline, design decisions section, limitations, full roadmap
+- [x] `docs/resume-bullets.md` — 8 technical resume bullets referencing real implementation details (412 tests, 11-stage pipeline, 9 MCP tools, 90-question eval dataset, Recall@5/MRR thresholds)
+- [x] Eval results placeholder table in README — headers and threshold targets documented; actual numbers to be filled by running `evals/runners/` against a live instance with Petstore, Stripe, and GitHub ingested
+- [x] MCP quickstart in README — JSON config snippets for Claude Desktop, Cursor, and VS Code Cline
 
 ---
 

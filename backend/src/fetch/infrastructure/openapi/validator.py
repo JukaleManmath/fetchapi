@@ -20,6 +20,7 @@ import ipaddress
 import json
 import logging
 import socket
+import sys
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -380,6 +381,14 @@ async def load_and_resolve(
 
     resolver = RefResolver(doc, base_url=source_url)
     await resolver.prefetch_external_refs()
-    resolved = resolver.resolve()
+    # Large specs (e.g. GitHub GHES, 10 MB+) have deeply nested $ref chains
+    # that exceed Python's default 1000-frame limit. Raise it for this call
+    # only — safe because ingestion runs in a single-threaded asyncio task.
+    _prev_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(max(_prev_limit, 10_000))
+    try:
+        resolved = resolver.resolve()
+    finally:
+        sys.setrecursionlimit(_prev_limit)
 
     return resolved, version
