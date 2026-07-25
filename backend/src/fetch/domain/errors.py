@@ -154,3 +154,20 @@ class IntegrationContextError(FetchError):
     def __init__(self, message: str, *, operation_id: str | None = None) -> None:
         super().__init__(message)
         self.operation_id = operation_id
+
+
+class CurlParseError(FetchError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class EndpointNotFoundError(FetchError):
+    def __init__(self, message: str, *, method: str = "", path: str = "") -> None:
+        super().__init__(message)
+        self.method = method
+        self.path = path
+
+
+class NoMatchForStatusCodeError(FetchError):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

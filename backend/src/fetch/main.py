@@ -17,6 +17,7 @@ from fetch.api.v1.integrations import router as integrations_router
 from fetch.api.v1.operations import router as operations_router
 from fetch.api.v1.queries import router as queries_router
 from fetch.api.v1.sources import router as sources_router
+from fetch.api.v1.validation import router as validation_router
 from fetch.config import get_settings
 from fetch.infrastructure.db.session import close_db, init_db
 from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
@@ -59,6 +60,7 @@ app.include_router(sources_router)
 app.include_router(operations_router)
 app.include_router(queries_router)
 app.include_router(integrations_router)
+app.include_router(validation_router)
 
 
 @app.get("/health/live", tags=["health"], include_in_schema=False)

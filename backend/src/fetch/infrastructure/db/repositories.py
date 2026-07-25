@@ -28,10 +28,16 @@ from fetch.domain.entities import (
     Chunk,
     ChunkRelation,
     Citation,
+    DiagnosticFinding,
+    EndpointMatch,
     ErrorDefinition,
+    ErrorStatusMatch,
     IngestionJob,
     IntegrationRun,
+    ParsedRequest,
     QueryRun,
+    RequestDiagnostic,
+    RequestDiagnosticRun,
     SourceRevision,
     ValidationIssue,
     ValidationReport,
@@ -39,9 +45,12 @@ from fetch.domain.entities import (
 from fetch.domain.enums import (
     AuthSchemeType,
     ChunkType,
+    DiagnosticCategory,
+    DiagnosticInputType,
     GenerationLanguage,
     HttpMethod,
     IngestionStage,
+    MatchConfidence,
     ParameterLocation,
     QueryWorkflow,
     RevisionStatus,
@@ -65,6 +74,7 @@ from fetch.infrastructure.db.models import (
     IngestionJobModel,
     IntegrationRunModel,
     QueryRunModel,
+    RequestDiagnosticRunModel,
     SourceRevisionModel,
 )
 
@@ -672,6 +682,17 @@ class PgErrorRepository:
             select(ErrorDefinitionModel).where(
                 ErrorDefinitionModel.revision_id == revision_id,
                 ErrorDefinitionModel.operation_id == operation_id,
+            )
+        )
+        return [_map_error(r) for r in result.scalars().all()]
+
+    async def find_by_status_code(
+        self, revision_id: UUID, status_code: str
+    ) -> list[ErrorDefinition]:
+        result = await self._session.execute(
+            select(ErrorDefinitionModel).where(
+                ErrorDefinitionModel.revision_id == revision_id,
+                ErrorDefinitionModel.status_code == status_code,
             )
         )
         return [_map_error(r) for r in result.scalars().all()]
@@ -1316,3 +1337,227 @@ class PgIntegrationRunRepository:
             .limit(limit)
         )
         return [_map_integration_run(r) for r in result.scalars().all()]
+
+
+# ── DiagnosticRunRepository ───────────────────────────────────────────────────
+
+
+def _diagnostic_to_json(diagnostic: RequestDiagnostic) -> dict[str, object]:
+    req = diagnostic.parsed_request
+    parsed_dict: dict[str, object] = {
+        "method": req.method,
+        "url": req.url,
+        "headers": dict(req.headers),
+        "body_raw": req.body_raw,
+        "body_json": req.body_json,
+        "content_type": req.content_type,
+        "auth_header": None,  # NEVER persist auth header value
+        "query_params": dict(req.query_params),
+        "is_url_encoded_body": req.is_url_encoded_body,
+    }
+
+    endpoint_dict: dict[str, object] | None = None
+    if diagnostic.endpoint_match is not None:
+        em = diagnostic.endpoint_match
+        endpoint_dict = {
+            "operation_id": str(em.operation.id) if em.operation else None,
+            "path_params": dict(em.path_params),
+            "match_confidence": str(em.match_confidence),
+        }
+
+    findings_list: list[dict[str, object]] = [
+        {
+            "severity": f.severity,
+            "category": str(f.category),
+            "message": f.message,
+            "field": f.field,
+            "canonical_value": f.canonical_value,
+        }
+        for f in diagnostic.findings
+    ]
+
+    error_status_dict: dict[str, object] | None = None
+    if diagnostic.error_status_match is not None:
+        esm = diagnostic.error_status_match
+        error_status_dict = {
+            "status_code": esm.status_code,
+            "matched_definitions": [
+                {
+                    "id": str(d.id),
+                    "status_code": d.status_code,
+                    "title": d.title,
+                    "description": d.description,
+                }
+                for d in esm.matched_definitions
+            ],
+            "is_documented": esm.is_documented,
+        }
+
+    return {
+        "parsed_request": parsed_dict,
+        "endpoint_match": endpoint_dict,
+        "findings": findings_list,
+        "error_status_match": error_status_dict,
+        "corrected_curl": diagnostic.corrected_curl,
+        "is_valid": diagnostic.is_valid,
+    }
+
+
+def _diagnostic_from_json(d: dict[str, object]) -> RequestDiagnostic:
+    req_d = cast(dict[str, object], d["parsed_request"])
+    parsed = ParsedRequest(
+        method=str(req_d["method"]),
+        url=str(req_d["url"]),
+        headers=cast(dict[str, str], req_d.get("headers") or {}),
+        body_raw=str(req_d["body_raw"]) if req_d.get("body_raw") is not None else None,
+        body_json=cast(dict[str, object], req_d.get("body_json")),
+        content_type=str(req_d["content_type"]) if req_d.get("content_type") else None,
+        auth_header=None,  # never persisted
+        query_params=cast(dict[str, str], req_d.get("query_params") or {}),
+        is_url_encoded_body=bool(req_d.get("is_url_encoded_body", False)),
+    )
+
+    findings = [
+        DiagnosticFinding(
+            severity=str(f["severity"]),
+            category=DiagnosticCategory(str(f["category"])),
+            message=str(f["message"]),
+            field=str(f["field"]) if f.get("field") else None,
+            canonical_value=str(f["canonical_value"]) if f.get("canonical_value") else None,
+        )
+        for f in cast(list[dict[str, object]], d.get("findings") or [])
+    ]
+
+    em_d = d.get("endpoint_match")
+    endpoint_match: EndpointMatch | None = None
+    if em_d is not None:
+        em_dict = cast(dict[str, object], em_d)
+        endpoint_match = EndpointMatch(
+            operation=None,  # operation not re-hydrated from JSONB
+            path_params=cast(dict[str, str], em_dict.get("path_params") or {}),
+            match_confidence=MatchConfidence(str(em_dict["match_confidence"])),
+        )
+
+    esm_d = d.get("error_status_match")
+    error_status_match: ErrorStatusMatch | None = None
+    if esm_d is not None:
+        esm_dict = cast(dict[str, object], esm_d)
+        error_status_match = ErrorStatusMatch(
+            status_code=str(esm_dict["status_code"]),
+            matched_definitions=[],
+            is_documented=bool(esm_dict["is_documented"]),
+        )
+
+    return RequestDiagnostic(
+        parsed_request=parsed,
+        endpoint_match=endpoint_match,
+        findings=findings,
+        error_status_match=error_status_match,
+        corrected_curl=str(d["corrected_curl"]) if d.get("corrected_curl") else None,
+        is_valid=bool(d.get("is_valid", False)),
+    )
+
+
+def _map_diagnostic_run(row: RequestDiagnosticRunModel) -> RequestDiagnosticRun:
+    diagnostic: RequestDiagnostic | None = None
+    if row.diagnostic is not None:
+        diagnostic = _diagnostic_from_json(row.diagnostic)
+    return RequestDiagnosticRun(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        source_id=row.source_id,
+        revision_id=row.revision_id,
+        operation_id=row.operation_id,
+        input_type=DiagnosticInputType(row.input_type),
+        raw_input=row.raw_input,
+        parsed_method=row.parsed_method,
+        parsed_url=row.parsed_url,
+        received_status_code=row.received_status_code,
+        diagnostic=diagnostic,
+        explanation=row.explanation,
+        corrected_curl=row.corrected_curl,
+        is_valid=row.is_valid,
+        support_status=SupportStatus(row.support_status),
+        prompt_version=row.prompt_version,
+        prompt_tokens=row.prompt_tokens,
+        completion_tokens=row.completion_tokens,
+        parse_ms=row.parse_ms,
+        match_ms=row.match_ms,
+        validate_ms=row.validate_ms,
+        explanation_ms=row.explanation_ms,
+        total_ms=row.total_ms,
+        created_at=row.created_at,
+    )
+
+
+class PgDiagnosticRunRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, run: RequestDiagnosticRun) -> None:
+        diagnostic_json = (
+            _diagnostic_to_json(run.diagnostic) if run.diagnostic is not None else None
+        )
+        stmt = (
+            pg_insert(RequestDiagnosticRunModel)
+            .values(
+                id=run.id,
+                workspace_id=run.workspace_id,
+                source_id=run.source_id,
+                revision_id=run.revision_id,
+                operation_id=run.operation_id,
+                input_type=run.input_type.value,
+                raw_input=run.raw_input,
+                parsed_method=run.parsed_method,
+                parsed_url=run.parsed_url,
+                received_status_code=run.received_status_code,
+                diagnostic=diagnostic_json,
+                explanation=run.explanation,
+                corrected_curl=run.corrected_curl,
+                is_valid=run.is_valid,
+                support_status=run.support_status.value,
+                prompt_version=run.prompt_version,
+                prompt_tokens=run.prompt_tokens,
+                completion_tokens=run.completion_tokens,
+                parse_ms=run.parse_ms,
+                match_ms=run.match_ms,
+                validate_ms=run.validate_ms,
+                explanation_ms=run.explanation_ms,
+                total_ms=run.total_ms,
+                created_at=run.created_at,
+            )
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "diagnostic": diagnostic_json,
+                    "explanation": run.explanation,
+                    "corrected_curl": run.corrected_curl,
+                    "is_valid": run.is_valid,
+                    "support_status": run.support_status.value,
+                    "prompt_tokens": run.prompt_tokens,
+                    "completion_tokens": run.completion_tokens,
+                    "parse_ms": run.parse_ms,
+                    "match_ms": run.match_ms,
+                    "validate_ms": run.validate_ms,
+                    "explanation_ms": run.explanation_ms,
+                    "total_ms": run.total_ms,
+                },
+            )
+        )
+        await self._session.execute(stmt)
+        logger.debug("diagnostic_run_saved", extra={"run_id": str(run.id)})
+
+    async def get(self, run_id: UUID) -> RequestDiagnosticRun | None:
+        row = await self._session.get(RequestDiagnosticRunModel, run_id)
+        return _map_diagnostic_run(row) if row else None
+
+    async def list_by_source(
+        self, source_id: UUID, limit: int = 50
+    ) -> list[RequestDiagnosticRun]:
+        result = await self._session.execute(
+            select(RequestDiagnosticRunModel)
+            .where(RequestDiagnosticRunModel.source_id == source_id)
+            .order_by(RequestDiagnosticRunModel.created_at.desc())
+            .limit(limit)
+        )
+        return [_map_diagnostic_run(r) for r in result.scalars().all()]
