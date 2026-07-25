@@ -18,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fetch.domain.entities import (
     ApiExample,
     ApiOperation,
+    ApiParameter,
+    ApiRequestBody,
+    ApiResponse,
     ApiSchema,
     ApiServer,
     ApiSource,
@@ -27,14 +30,19 @@ from fetch.domain.entities import (
     Citation,
     ErrorDefinition,
     IngestionJob,
+    IntegrationRun,
     QueryRun,
     SourceRevision,
+    ValidationIssue,
+    ValidationReport,
 )
 from fetch.domain.enums import (
     AuthSchemeType,
     ChunkType,
+    GenerationLanguage,
     HttpMethod,
     IngestionStage,
+    ParameterLocation,
     QueryWorkflow,
     RevisionStatus,
     SourceType,
@@ -55,6 +63,7 @@ from fetch.infrastructure.db.models import (
     EmbeddingProfileModel,
     ErrorDefinitionModel,
     IngestionJobModel,
+    IntegrationRunModel,
     QueryRunModel,
     SourceRevisionModel,
 )
@@ -565,6 +574,12 @@ class PgServerRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
+    async def list_by_revision(self, revision_id: UUID) -> list[ApiServer]:
+        result = await self._session.execute(
+            select(ApiServerModel).where(ApiServerModel.revision_id == revision_id)
+        )
+        return [_map_server(r) for r in result.scalars().all()]
+
     async def save_many(self, servers: list[ApiServer]) -> None:
         for server in servers:
             stmt = (
@@ -581,12 +596,33 @@ class PgServerRepository:
             await self._session.execute(stmt)
 
 
+def _map_server(row: ApiServerModel) -> ApiServer:
+    return ApiServer(
+        id=row.id,
+        revision_id=row.revision_id,
+        url=row.url,
+        description=row.description,
+        variables=dict(row.variables or {}),
+    )
+
+
 # ── ExampleRepository (used internally by ingestion) ──────────────────────────
 
 
 class PgExampleRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def find_by_operation(
+        self, revision_id: UUID, operation_id: UUID
+    ) -> list[ApiExample]:
+        result = await self._session.execute(
+            select(ApiExampleModel).where(
+                ApiExampleModel.revision_id == revision_id,
+                ApiExampleModel.operation_id == operation_id,
+            )
+        )
+        return [_map_example(r) for r in result.scalars().all()]
 
     async def save_many(self, examples: list[ApiExample]) -> None:
         for ex in examples:
@@ -608,12 +644,37 @@ class PgExampleRepository:
             await self._session.execute(stmt)
 
 
+def _map_example(row: ApiExampleModel) -> ApiExample:
+    return ApiExample(
+        id=row.id,
+        revision_id=row.revision_id,
+        workspace_id=row.workspace_id,
+        operation_id=row.operation_id,
+        title=row.title,
+        description=row.description,
+        language=row.language,
+        content=row.content,
+        source_pointer=row.source_pointer,
+    )
+
+
 # ── ErrorDefinitionRepository (used internally by ingestion) ──────────────────
 
 
 class PgErrorRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def find_by_operation(
+        self, revision_id: UUID, operation_id: UUID
+    ) -> list[ErrorDefinition]:
+        result = await self._session.execute(
+            select(ErrorDefinitionModel).where(
+                ErrorDefinitionModel.revision_id == revision_id,
+                ErrorDefinitionModel.operation_id == operation_id,
+            )
+        )
+        return [_map_error(r) for r in result.scalars().all()]
 
     async def save_many(self, errors: list[ErrorDefinition]) -> None:
         for err in errors:
@@ -633,6 +694,20 @@ class PgErrorRepository:
                 .on_conflict_do_nothing()
             )
             await self._session.execute(stmt)
+
+
+def _map_error(row: ErrorDefinitionModel) -> ErrorDefinition:
+    return ErrorDefinition(
+        id=row.id,
+        revision_id=row.revision_id,
+        workspace_id=row.workspace_id,
+        operation_id=row.operation_id,
+        status_code=row.status_code,
+        error_code=row.error_code,
+        title=row.title,
+        description=row.description,
+        source_pointer=row.source_pointer,
+    )
 
 
 # ── EmbeddingProfileRepository ────────────────────────────────────────────────
@@ -1021,3 +1096,223 @@ class PgQueryRunRepository:
             .limit(limit)
         )
         return [_map_query_run(r) for r in result.scalars().all()]
+
+
+# ── PgParameterRepository ─────────────────────────────────────────────────────
+
+
+def _map_parameter(row: ApiParameterModel) -> ApiParameter:
+    return ApiParameter(
+        id=row.id,
+        revision_id=row.revision_id,
+        operation_id=row.operation_id,
+        name=row.name,
+        location=ParameterLocation(row.location),
+        required=row.required,
+        deprecated=row.deprecated,
+        description=row.description,
+        schema_json=row.schema_json,
+        example_json=row.example_json,
+        source_pointer=row.source_pointer,
+    )
+
+
+class PgParameterRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def list_by_operation(self, operation_id: UUID) -> list[ApiParameter]:
+        result = await self._session.execute(
+            select(ApiParameterModel).where(
+                ApiParameterModel.operation_id == operation_id
+            )
+        )
+        return [_map_parameter(r) for r in result.scalars().all()]
+
+
+# ── PgRequestBodyRepository ───────────────────────────────────────────────────
+
+
+def _map_request_body(row: ApiRequestBodyModel) -> ApiRequestBody:
+    return ApiRequestBody(
+        id=row.id,
+        operation_id=row.operation_id,
+        required=row.required,
+        description=row.description,
+        content_schemas=dict(row.content_schemas or {}),
+    )
+
+
+class PgRequestBodyRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def get_by_operation(self, operation_id: UUID) -> ApiRequestBody | None:
+        result = await self._session.execute(
+            select(ApiRequestBodyModel).where(
+                ApiRequestBodyModel.operation_id == operation_id
+            )
+        )
+        row = result.scalar_one_or_none()
+        return _map_request_body(row) if row else None
+
+
+# ── PgResponseRepository ──────────────────────────────────────────────────────
+
+
+def _map_response(row: ApiResponseModel) -> ApiResponse:
+    return ApiResponse(
+        id=row.id,
+        operation_id=row.operation_id,
+        status_code=row.status_code,
+        description=row.description,
+        content_schemas=dict(row.content_schemas or {}),
+        headers=dict(row.headers or {}),
+    )
+
+
+class PgResponseRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def list_by_operation(self, operation_id: UUID) -> list[ApiResponse]:
+        result = await self._session.execute(
+            select(ApiResponseModel).where(
+                ApiResponseModel.operation_id == operation_id
+            )
+        )
+        return [_map_response(r) for r in result.scalars().all()]
+
+
+# ── IntegrationRunRepository ──────────────────────────────────────────────────
+
+
+def _validation_report_to_json(report: ValidationReport) -> dict[str, object]:
+    return {
+        "contract_valid": report.contract_valid,
+        "syntax_valid": report.syntax_valid,
+        "overall_valid": report.overall_valid,
+        "issues": [
+            {
+                "severity": i.severity,
+                "category": i.category,
+                "message": i.message,
+                "field": i.field,
+            }
+            for i in report.issues
+        ],
+    }
+
+
+def _validation_report_from_json(d: dict[str, object]) -> ValidationReport:
+    raw_issues = d.get("issues", [])
+    issues = [
+        ValidationIssue(
+            severity=str(i["severity"]),
+            category=str(i["category"]),
+            message=str(i["message"]),
+            field=str(i["field"]) if i.get("field") else None,
+        )
+        for i in cast(list[dict[str, object]], raw_issues)
+    ]
+    return ValidationReport(
+        contract_valid=bool(d["contract_valid"]),
+        syntax_valid=bool(d["syntax_valid"]),
+        overall_valid=bool(d["overall_valid"]),
+        issues=issues,
+    )
+
+
+def _map_integration_run(row: IntegrationRunModel) -> IntegrationRun:
+    validation_report: ValidationReport | None = None
+    if row.validation_report is not None:
+        validation_report = _validation_report_from_json(row.validation_report)
+    if row.operation_id is None:
+        raise ValueError(f"IntegrationRun {row.id} has null operation_id")
+    return IntegrationRun(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        source_id=row.source_id,
+        revision_id=row.revision_id,
+        operation_id=row.operation_id,
+        language=GenerationLanguage(row.language),
+        generated_code=row.generated_code,
+        validation_report=validation_report,
+        support_status=SupportStatus(row.support_status),
+        warnings=cast(list[str], list(row.warnings or [])),
+        prompt_version=row.prompt_version,
+        prompt_tokens=row.prompt_tokens,
+        completion_tokens=row.completion_tokens,
+        context_assembly_ms=row.context_assembly_ms,
+        generation_ms=row.generation_ms,
+        validation_ms=row.validation_ms,
+        total_ms=row.total_ms,
+        created_at=row.created_at,
+    )
+
+
+class PgIntegrationRunRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, run: IntegrationRun) -> None:
+        validation_json = (
+            _validation_report_to_json(run.validation_report)
+            if run.validation_report is not None
+            else None
+        )
+        stmt = (
+            pg_insert(IntegrationRunModel)
+            .values(
+                id=run.id,
+                workspace_id=run.workspace_id,
+                source_id=run.source_id,
+                revision_id=run.revision_id,
+                operation_id=run.operation_id,
+                language=run.language.value,
+                generated_code=run.generated_code,
+                validation_report=validation_json,
+                support_status=run.support_status.value,
+                warnings=list(run.warnings),
+                prompt_version=run.prompt_version,
+                prompt_tokens=run.prompt_tokens,
+                completion_tokens=run.completion_tokens,
+                context_assembly_ms=run.context_assembly_ms,
+                generation_ms=run.generation_ms,
+                validation_ms=run.validation_ms,
+                total_ms=run.total_ms,
+                created_at=run.created_at,
+            )
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "generated_code": run.generated_code,
+                    "validation_report": validation_json,
+                    "support_status": run.support_status.value,
+                    "warnings": list(run.warnings),
+                    "prompt_tokens": run.prompt_tokens,
+                    "completion_tokens": run.completion_tokens,
+                    "context_assembly_ms": run.context_assembly_ms,
+                    "generation_ms": run.generation_ms,
+                    "validation_ms": run.validation_ms,
+                    "total_ms": run.total_ms,
+                },
+            )
+        )
+        await self._session.execute(stmt)
+        logger.debug("integration_run_saved", extra={"run_id": str(run.id)})
+
+    async def get(self, run_id: UUID) -> IntegrationRun | None:
+        row = await self._session.get(IntegrationRunModel, run_id)
+        return _map_integration_run(row) if row else None
+
+    async def list_by_source(
+        self, source_id: UUID, limit: int = 50
+    ) -> list[IntegrationRun]:
+        result = await self._session.execute(
+            select(IntegrationRunModel)
+            .where(IntegrationRunModel.source_id == source_id)
+            .order_by(IntegrationRunModel.created_at.desc())
+            .limit(limit)
+        )
+        return [_map_integration_run(r) for r in result.scalars().all()]

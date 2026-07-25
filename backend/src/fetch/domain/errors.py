@@ -146,3 +146,11 @@ class RequestValidationError(FetchError):
 
 class GeneratedCodeValidationError(FetchError):
     """The generated integration code failed schema or syntax validation."""
+
+
+class IntegrationContextError(FetchError):
+    """Required context for integration generation could not be assembled."""
+
+    def __init__(self, message: str, *, operation_id: str | None = None) -> None:
+        super().__init__(message)
+        self.operation_id = operation_id
