@@ -15,7 +15,10 @@ from fetch.domain.entities import (
     ApiSchema,
     ApiSource,
     AuthScheme,
+    Chunk,
+    ChunkRelation,
     IngestionJob,
+    QueryRun,
     SourceRevision,
 )
 
@@ -117,8 +120,13 @@ class EmbeddingProvider(Protocol):
         self,
         texts: list[str],
         model_id: str,
+        input_type: str = "passage",
     ) -> list[EmbeddingResult]:
-        """Embed a batch of texts. Returns one result per input, in order."""
+        """Embed a batch of texts. Returns one result per input, in order.
+
+        ``input_type`` follows the NIM convention: use ``"passage"`` for
+        indexing and ``"query"`` for query-time embedding.
+        """
         ...
 
 
@@ -251,6 +259,12 @@ class OperationRepository(Protocol):
         """Exact lookup by method and normalized path."""
         ...
 
+    async def find_by_operation_id(
+        self, revision_id: UUID, operation_id: str
+    ) -> ApiOperation | None:
+        """Exact lookup by the string operation_id field."""
+        ...
+
     async def save_many(self, operations: list[ApiOperation]) -> None:
         """Bulk insert operations. On conflict on logical_key, skip (idempotent)."""
         ...
@@ -268,6 +282,10 @@ class SchemaRepository(Protocol):
         """Return all schemas for a revision."""
         ...
 
+    async def find_by_name(self, revision_id: UUID, name: str) -> ApiSchema | None:
+        """Exact lookup by schema name within a revision."""
+        ...
+
     async def save_many(self, schemas: list[ApiSchema]) -> None:
         """Bulk insert schemas. On conflict on logical_key, skip (idempotent)."""
         ...
@@ -283,4 +301,64 @@ class AuthSchemeRepository(Protocol):
 
     async def save_many(self, schemes: list[AuthScheme]) -> None:
         """Bulk insert auth schemes. On conflict on name+revision, skip (idempotent)."""
+        ...
+
+
+@runtime_checkable
+class ChunkRepository(Protocol):
+    """Persistence for Chunk entities."""
+
+    async def find_chunk_ids_by_entity(
+        self, revision_id: UUID, entity_type: str, entity_id: UUID
+    ) -> list[UUID]:
+        """Return chunk IDs whose entity_type and entity_id match within a revision."""
+        ...
+
+    async def find_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[Chunk]:
+        """Return chunks whose IDs are in chunk_ids. Order is not guaranteed."""
+        ...
+
+    async def save_many(self, chunks: list[Chunk]) -> None:
+        """Bulk insert chunks. On conflict on (revision_id, content_hash), skip."""
+        ...
+
+    async def list_by_revision(self, revision_id: UUID) -> list[Chunk]:
+        """Return all chunks for a revision."""
+        ...
+
+
+@runtime_checkable
+class ChunkRelationRepository(Protocol):
+    """Persistence for ChunkRelation entities."""
+
+    async def find_relations_for_chunks(
+        self, chunk_ids: list[UUID], revision_id: UUID
+    ) -> list[ChunkRelation]:
+        """Return relations whose from_chunk_id is in chunk_ids and revision matches."""
+        ...
+
+    async def save_many(self, relations: list[ChunkRelation]) -> None:
+        """Bulk insert chunk relations. On conflict on (from, to, type), skip."""
+        ...
+
+
+@runtime_checkable
+class QueryRunRepository(Protocol):
+    """Persistence for QueryRun entities."""
+
+    async def save(self, run: QueryRun) -> None:
+        """Insert or update a query run record.
+
+        Uses INSERT … ON CONFLICT (id) DO UPDATE so callers can upsert a run
+        that was first persisted during retrieval and then updated after
+        generation.
+        """
+        ...
+
+    async def get(self, run_id: UUID) -> QueryRun | None:
+        """Return the query run or None if not found."""
+        ...
+
+    async def list_by_source(self, source_id: UUID, limit: int = 50) -> list[QueryRun]:
+        """Return the most recent runs for a source, newest first."""
         ...

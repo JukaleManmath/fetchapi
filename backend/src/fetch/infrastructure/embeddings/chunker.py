@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import uuid as _uuid_mod
 from uuid import UUID, uuid4
 
 from fetch.domain.entities import (
@@ -43,6 +44,15 @@ def _content_hash(text: str, profile_version: str) -> str:
     """SHA-256 of text + profile_version — stable across runs for the same input."""
     payload = f"{profile_version}:{text}".encode()
     return hashlib.sha256(payload).hexdigest()
+
+
+def _chunk_id_from_hash(content_hash: str, revision_id: UUID) -> UUID:
+    """Deterministic chunk UUID scoped to a revision.
+
+    Same content + same revision → same UUID (ON CONFLICT DO NOTHING is safe).
+    Same content + different revision → different UUID (no PK collision across revisions).
+    """
+    return _uuid_mod.uuid5(_uuid_mod.NAMESPACE_URL, f"{revision_id}:{content_hash}")
 
 
 # ── Operation chunk ───────────────────────────────────────────────────────────
@@ -132,7 +142,8 @@ def build_operation_chunk(
             lines.append(f"  {resp.status_code}{desc}")
 
     text = "\n".join(lines)
-    chunk_id = uuid4()
+    content_hash = _content_hash(text, profile.version)
+    chunk_id = _chunk_id_from_hash(content_hash, operation.revision_id)
 
     status_codes = [r.status_code for r in operation.responses]
 
@@ -146,7 +157,7 @@ def build_operation_chunk(
         entity_id=operation.id,
         title=header,
         text=text,
-        content_hash=_content_hash(text, profile.version),
+        content_hash=content_hash,
         embedding_profile_version=str(profile.id),
         qdrant_point_id=chunk_id,
         method=operation.method.value,
@@ -204,7 +215,8 @@ def build_schema_chunk(
         pass
 
     text = "\n".join(lines)
-    chunk_id = uuid4()
+    content_hash = _content_hash(text, profile.version)
+    chunk_id = _chunk_id_from_hash(content_hash, schema.revision_id)
 
     return Chunk(
         id=chunk_id,
@@ -216,7 +228,7 @@ def build_schema_chunk(
         entity_id=schema.id,
         title=f"Schema: {schema.name}",
         text=text,
-        content_hash=_content_hash(text, profile.version),
+        content_hash=content_hash,
         embedding_profile_version=str(profile.id),
         qdrant_point_id=chunk_id,
         method=None,
@@ -279,7 +291,8 @@ def build_auth_chunk(
         pass
 
     text = "\n".join(lines)
-    chunk_id = uuid4()
+    content_hash = _content_hash(text, profile.version)
+    chunk_id = _chunk_id_from_hash(content_hash, auth_scheme.revision_id)
 
     return Chunk(
         id=chunk_id,
@@ -291,7 +304,7 @@ def build_auth_chunk(
         entity_id=auth_scheme.id,
         title=f"Auth: {auth_scheme.name}",
         text=text,
-        content_hash=_content_hash(text, profile.version),
+        content_hash=content_hash,
         embedding_profile_version=str(profile.id),
         qdrant_point_id=chunk_id,
         method=None,
@@ -327,7 +340,8 @@ def build_error_chunk(
 
     status_codes = [error.status_code] if error.status_code else []
     text = "\n".join(lines)
-    chunk_id = uuid4()
+    content_hash = _content_hash(text, profile.version)
+    chunk_id = _chunk_id_from_hash(content_hash, error.revision_id)
 
     return Chunk(
         id=chunk_id,
@@ -339,7 +353,7 @@ def build_error_chunk(
         entity_id=error.id,
         title=title,
         text=text,
-        content_hash=_content_hash(text, profile.version),
+        content_hash=content_hash,
         embedding_profile_version=str(profile.id),
         qdrant_point_id=chunk_id,
         method=None,

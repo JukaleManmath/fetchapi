@@ -8,6 +8,7 @@ All methods receive an AsyncSession injected from the caller.
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import cast
 from uuid import UUID
 
 from sqlalchemy import select, update
@@ -23,8 +24,10 @@ from fetch.domain.entities import (
     AuthScheme,
     Chunk,
     ChunkRelation,
+    Citation,
     ErrorDefinition,
     IngestionJob,
+    QueryRun,
     SourceRevision,
 )
 from fetch.domain.enums import (
@@ -32,8 +35,10 @@ from fetch.domain.enums import (
     ChunkType,
     HttpMethod,
     IngestionStage,
+    QueryWorkflow,
     RevisionStatus,
     SourceType,
+    SupportStatus,
 )
 from fetch.infrastructure.db.models import (
     ApiExampleModel,
@@ -50,6 +55,7 @@ from fetch.infrastructure.db.models import (
     EmbeddingProfileModel,
     ErrorDefinitionModel,
     IngestionJobModel,
+    QueryRunModel,
     SourceRevisionModel,
 )
 
@@ -311,8 +317,7 @@ class PgOperationRepository:
 
     async def get(self, operation_id: UUID) -> ApiOperation | None:
         result = await self._session.execute(
-            select(ApiOperationModel)
-            .where(ApiOperationModel.id == operation_id)
+            select(ApiOperationModel).where(ApiOperationModel.id == operation_id)
         )
         row = result.scalar_one_or_none()
         return _map_operation(row) if row else None
@@ -333,6 +338,18 @@ class PgOperationRepository:
                 ApiOperationModel.revision_id == revision_id,
                 ApiOperationModel.method == method.upper(),
                 ApiOperationModel.path_normalized == path_normalized,
+            )
+        )
+        row = result.scalar_one_or_none()
+        return _map_operation(row) if row else None
+
+    async def find_by_operation_id(
+        self, revision_id: UUID, operation_id: str
+    ) -> ApiOperation | None:
+        result = await self._session.execute(
+            select(ApiOperationModel).where(
+                ApiOperationModel.revision_id == revision_id,
+                ApiOperationModel.operation_id == operation_id,
             )
         )
         row = result.scalar_one_or_none()
@@ -359,9 +376,7 @@ class PgOperationRepository:
                     source_pointer=op.source_pointer,
                     security_requirements=op.security_requirements,
                 )
-                .on_conflict_do_nothing(
-                    constraint="uq_operations_revision_logical_key"
-                )
+                .on_conflict_do_nothing(constraint="uq_operations_revision_logical_key")
             )
             await self._session.execute(stmt)
 
@@ -453,6 +468,16 @@ class PgSchemaRepository:
             select(ApiSchemaModel).where(ApiSchemaModel.revision_id == revision_id)
         )
         return [_map_schema(r) for r in result.scalars().all()]
+
+    async def find_by_name(self, revision_id: UUID, name: str) -> ApiSchema | None:
+        result = await self._session.execute(
+            select(ApiSchemaModel).where(
+                ApiSchemaModel.revision_id == revision_id,
+                ApiSchemaModel.name == name,
+            )
+        )
+        row = result.scalar_one_or_none()
+        return _map_schema(row) if row else None
 
     async def save_many(self, schemas: list[ApiSchema]) -> None:
         for schema in schemas:
@@ -646,7 +671,9 @@ class PgEmbeddingProfileRepository:
 
     async def get_by_version(self, version: str) -> EmbeddingProfileRecord | None:
         result = await self._session.execute(
-            select(EmbeddingProfileModel).where(EmbeddingProfileModel.version == version)
+            select(EmbeddingProfileModel).where(
+                EmbeddingProfileModel.version == version
+            )
         )
         row = result.scalar_one_or_none()
         return _map_embedding_profile(row) if row else None
@@ -708,6 +735,28 @@ class PgChunkRepository:
             )
             await self._session.execute(stmt)
 
+    async def find_chunk_ids_by_entity(
+        self, revision_id: UUID, entity_type: str, entity_id: UUID
+    ) -> list[UUID]:
+        """Return chunk IDs whose entity_type and entity_id match within a revision."""
+        result = await self._session.execute(
+            select(ChunkModel.id).where(
+                ChunkModel.revision_id == revision_id,
+                ChunkModel.entity_type == entity_type,
+                ChunkModel.entity_id == entity_id,
+            )
+        )
+        return list(result.scalars().all())
+
+    async def find_chunks_by_ids(self, chunk_ids: list[UUID]) -> list[Chunk]:
+        """Return chunks whose IDs are in chunk_ids."""
+        if not chunk_ids:
+            return []
+        result = await self._session.execute(
+            select(ChunkModel).where(ChunkModel.id.in_(chunk_ids))
+        )
+        return [_map_chunk(r) for r in result.scalars().all()]
+
     async def save_many_relations(self, relations: list[ChunkRelation]) -> None:
         """Bulk insert chunk relations. On conflict on (from, to, type), skip."""
         for rel in relations:
@@ -732,6 +781,7 @@ class PgChunkRepository:
 
     async def count_by_revision(self, revision_id: UUID) -> int:
         from sqlalchemy import func
+
         result = await self._session.execute(
             select(func.count()).where(ChunkModel.revision_id == revision_id)
         )
@@ -761,3 +811,207 @@ def _map_chunk(row: ChunkModel) -> Chunk:
         source_pointer=row.source_pointer,
         language=row.language,
     )
+
+
+# ── ChunkRelationRepository ───────────────────────────────────────────────────
+
+
+class PgChunkRelationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def find_relations_for_chunks(
+        self, chunk_ids: list[UUID], revision_id: UUID
+    ) -> list[ChunkRelation]:
+        """Return relations whose from_chunk_id is in chunk_ids and revision matches."""
+        if not chunk_ids:
+            return []
+        result = await self._session.execute(
+            select(ChunkRelationModel).where(
+                ChunkRelationModel.from_chunk_id.in_(chunk_ids),
+                ChunkRelationModel.revision_id == revision_id,
+            )
+        )
+        return [_map_chunk_relation(r) for r in result.scalars().all()]
+
+    async def save_many(self, relations: list[ChunkRelation]) -> None:
+        """Bulk insert chunk relations. On conflict on (from, to, type), skip."""
+        for rel in relations:
+            stmt = (
+                pg_insert(ChunkRelationModel)
+                .values(
+                    id=rel.id,
+                    revision_id=rel.revision_id,
+                    from_chunk_id=rel.from_chunk_id,
+                    to_chunk_id=rel.to_chunk_id,
+                    relation_type=rel.relation_type.value,
+                )
+                .on_conflict_do_nothing(constraint="uq_chunk_relations_edge")
+            )
+            await self._session.execute(stmt)
+
+
+def _map_chunk_relation(row: ChunkRelationModel) -> ChunkRelation:
+    from fetch.domain.enums import ChunkRelationType
+
+    return ChunkRelation(
+        id=row.id,
+        from_chunk_id=row.from_chunk_id,
+        to_chunk_id=row.to_chunk_id,
+        relation_type=ChunkRelationType(row.relation_type),
+        revision_id=row.revision_id,
+    )
+
+
+# ── QueryRunRepository ────────────────────────────────────────────────────────
+
+
+def _citations_to_json(citations: list[Citation]) -> list[dict[str, object]]:
+    """Serialise Citation value objects to plain dicts for JSONB storage."""
+    return [
+        {
+            "source_id": c.source_id,
+            "chunk_id": str(c.chunk_id),
+            "entity_type": c.entity_type,
+            "entity_id": str(c.entity_id) if c.entity_id else None,
+            "title": c.title,
+            "content": c.content,
+            "source_url": c.source_url,
+            "source_pointer": c.source_pointer,
+            "api_version": c.api_version,
+            "method": c.method,
+            "path": c.path,
+        }
+        for c in citations
+    ]
+
+
+def _citations_from_json(raw: list[dict[str, object]]) -> list[Citation]:
+    """Deserialise Citation value objects from JSONB storage."""
+    result: list[Citation] = []
+    for d in raw:
+        entity_id_raw = d.get("entity_id")
+        result.append(
+            Citation(
+                source_id=str(d["source_id"]),
+                chunk_id=UUID(str(d["chunk_id"])),
+                entity_type=str(d.get("entity_type", "")),
+                entity_id=UUID(str(entity_id_raw)) if entity_id_raw else None,
+                title=str(d.get("title", "")),
+                content=str(d.get("content", "")),
+                source_url=str(d["source_url"]) if d.get("source_url") else None,
+                source_pointer=(
+                    str(d["source_pointer"]) if d.get("source_pointer") else None
+                ),
+                api_version=str(d["api_version"]) if d.get("api_version") else None,
+                method=str(d["method"]) if d.get("method") else None,
+                path=str(d["path"]) if d.get("path") else None,
+            )
+        )
+    return result
+
+
+def _map_query_run(row: QueryRunModel) -> QueryRun:
+    return QueryRun(
+        id=row.id,
+        workspace_id=row.workspace_id,
+        source_id=row.source_id,
+        revision_id=row.revision_id,
+        workflow=QueryWorkflow(row.workflow),
+        question=row.question,
+        answer=row.answer,
+        citations=_citations_from_json(
+            cast(list[dict[str, object]], row.citations or [])
+        ),
+        support_status=SupportStatus(row.support_status),
+        warnings=cast(list[str], list(row.warnings or [])),
+        retrieval_ms=row.retrieval_ms,
+        generation_ms=row.generation_ms,
+        total_ms=row.total_ms,
+        prompt_tokens=row.prompt_tokens,
+        completion_tokens=row.completion_tokens,
+        dense_candidate_count=row.dense_candidate_count,
+        bm25_candidate_count=row.bm25_candidate_count,
+        fused_candidate_count=row.fused_candidate_count,
+        reranked_candidate_count=row.reranked_candidate_count,
+        expanded_candidate_count=row.expanded_candidate_count,
+        exact_match_found=row.exact_match_found,
+        created_at=row.created_at,
+    )
+
+
+class PgQueryRunRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, run: QueryRun) -> None:
+        """Insert or update a query run.
+
+        Uses INSERT … ON CONFLICT (id) DO UPDATE so that a row written during
+        retrieval can be updated after generation without a separate fetch.
+        """
+        stmt = (
+            pg_insert(QueryRunModel)
+            .values(
+                id=run.id,
+                workspace_id=run.workspace_id,
+                source_id=run.source_id,
+                revision_id=run.revision_id,
+                workflow=run.workflow.value,
+                question=run.question,
+                answer=run.answer,
+                citations=_citations_to_json(run.citations),
+                support_status=run.support_status.value,
+                warnings=list(run.warnings),
+                retrieval_ms=run.retrieval_ms,
+                generation_ms=run.generation_ms,
+                total_ms=run.total_ms,
+                prompt_tokens=run.prompt_tokens,
+                completion_tokens=run.completion_tokens,
+                dense_candidate_count=run.dense_candidate_count,
+                bm25_candidate_count=run.bm25_candidate_count,
+                fused_candidate_count=run.fused_candidate_count,
+                reranked_candidate_count=run.reranked_candidate_count,
+                expanded_candidate_count=run.expanded_candidate_count,
+                exact_match_found=run.exact_match_found,
+                created_at=run.created_at,
+            )
+            .on_conflict_do_update(
+                index_elements=["id"],
+                set_={
+                    "answer": run.answer,
+                    "citations": _citations_to_json(run.citations),
+                    "support_status": run.support_status.value,
+                    "warnings": list(run.warnings),
+                    "retrieval_ms": run.retrieval_ms,
+                    "generation_ms": run.generation_ms,
+                    "total_ms": run.total_ms,
+                    "prompt_tokens": run.prompt_tokens,
+                    "completion_tokens": run.completion_tokens,
+                    "dense_candidate_count": run.dense_candidate_count,
+                    "bm25_candidate_count": run.bm25_candidate_count,
+                    "fused_candidate_count": run.fused_candidate_count,
+                    "reranked_candidate_count": run.reranked_candidate_count,
+                    "expanded_candidate_count": run.expanded_candidate_count,
+                    "exact_match_found": run.exact_match_found,
+                },
+            )
+        )
+        await self._session.execute(stmt)
+        logger.debug(
+            "query_run_saved",
+            extra={"run_id": str(run.id), "retrieval_ms": run.retrieval_ms},
+        )
+
+    async def get(self, run_id: UUID) -> QueryRun | None:
+        row = await self._session.get(QueryRunModel, run_id)
+        return _map_query_run(row) if row else None
+
+    async def list_by_source(self, source_id: UUID, limit: int = 50) -> list[QueryRun]:
+        result = await self._session.execute(
+            select(QueryRunModel)
+            .where(QueryRunModel.source_id == source_id)
+            .order_by(QueryRunModel.created_at.desc())
+            .limit(limit)
+        )
+        return [_map_query_run(r) for r in result.scalars().all()]

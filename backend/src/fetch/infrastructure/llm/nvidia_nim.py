@@ -77,9 +77,7 @@ class NvidiaNimProvider:
         try:
             stream = await self._llm_client.chat.completions.create(
                 model=config.model_id,
-                messages=[
-                    {"role": m.role, "content": m.content} for m in messages
-                ],
+                messages=[{"role": m.role, "content": m.content} for m in messages],
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
                 stream=True,
@@ -123,9 +121,7 @@ class NvidiaNimProvider:
         try:
             response = await self._llm_client.chat.completions.create(
                 model=config.model_id,
-                messages=[
-                    {"role": m.role, "content": m.content} for m in messages
-                ],
+                messages=[{"role": m.role, "content": m.content} for m in messages],
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
                 stream=False,
@@ -140,8 +136,14 @@ class NvidiaNimProvider:
         self,
         texts: list[str],
         model_id: str,
+        input_type: str = "passage",
     ) -> list[EmbeddingResult]:
-        """Embed a batch of texts using NIM's embeddings endpoint."""
+        """Embed a batch of texts using NIM's embeddings endpoint.
+
+        ``input_type`` should be ``"passage"`` for indexing and ``"query"``
+        for query-time embedding (NIM asymmetric embedding models use this
+        to apply different transformations per side of the retrieval pair).
+        """
         if not texts:
             return []
         try:
@@ -149,7 +151,7 @@ class NvidiaNimProvider:
                 model=model_id,
                 input=texts,
                 encoding_format="float",
-                extra_body={"input_type": "passage", "truncate": "END"},
+                extra_body={"input_type": input_type, "truncate": "END"},
             )
             return [
                 EmbeddingResult(index=item.index, vector=item.embedding)
@@ -187,21 +189,26 @@ class NvidiaNimProvider:
             response.raise_for_status()
         except httpx.TimeoutException as exc:
             from fetch.domain.errors import ProviderTimeoutError
+
             raise ProviderTimeoutError(str(exc)) from exc
         except httpx.HTTPStatusError as exc:
             status = exc.response.status_code
             if status in (401, 403):
                 from fetch.domain.errors import ProviderAuthError
+
                 raise ProviderAuthError(str(exc)) from exc
             if status == 429:
                 from fetch.domain.errors import ProviderRateLimitError
+
                 raise ProviderRateLimitError(str(exc)) from exc
             if status >= 500:
                 from fetch.domain.errors import ProviderUnavailableError
+
                 raise ProviderUnavailableError(str(exc)) from exc
             raise ProviderError(str(exc), retryable=False) from exc
         except httpx.RequestError as exc:
             from fetch.domain.errors import ProviderUnavailableError
+
             raise ProviderUnavailableError(str(exc)) from exc
 
         data = response.json()

@@ -18,6 +18,7 @@ Design notes (ARCHITECTURE.md §7):
 from __future__ import annotations
 
 import logging
+from typing import cast
 from uuid import UUID
 
 from qdrant_client import AsyncQdrantClient
@@ -25,11 +26,62 @@ from qdrant_client.http import models as qmodels
 
 from fetch.config import get_settings
 from fetch.domain.entities import Chunk
+from fetch.infrastructure.qdrant.models import ChunkHit
 
 logger = logging.getLogger(__name__)
 
 # Payload field used for Qdrant BM25 text index. Mirrors chunk.text.
 _TEXT_FIELD = "text"
+
+
+def _build_tenant_filter(
+    workspace_id: UUID,
+    revision_id: UUID,
+    embedding_profile_version: str,
+    source_ids: list[UUID] | None = None,
+) -> qmodels.Filter:
+    """Build the mandatory tenant-isolation filter for every Qdrant query.
+
+    Never call search_dense or search_bm25 without this filter.
+    All four fields are required by ARCHITECTURE.md §7.3.
+    """
+    must: list[qmodels.Condition] = [
+        qmodels.FieldCondition(
+            key="workspace_id",
+            match=qmodels.MatchValue(value=str(workspace_id)),
+        ),
+        qmodels.FieldCondition(
+            key="revision_id",
+            match=qmodels.MatchValue(value=str(revision_id)),
+        ),
+        qmodels.FieldCondition(
+            key="embedding_profile_version",
+            match=qmodels.MatchValue(value=embedding_profile_version),
+        ),
+    ]
+
+    if source_ids:
+        must.append(
+            qmodels.FieldCondition(
+                key="source_id",
+                match=qmodels.MatchAny(any=[str(sid) for sid in source_ids]),
+            )
+        )
+
+    return qmodels.Filter(must=must)
+
+
+def _assert_tenant_scoped(filter: qmodels.Filter) -> None:
+    """Raise AssertionError if mandatory tenant fields are missing from filter.must."""
+    required = {"workspace_id", "revision_id", "embedding_profile_version"}
+    present = {
+        c.key
+        for c in (filter.must or [])
+        if isinstance(c, qmodels.FieldCondition)
+    }
+    missing = required - present
+    if missing:
+        raise AssertionError(f"Qdrant query missing mandatory tenant filters: {missing}")
 
 
 class QdrantRepository:
@@ -81,7 +133,12 @@ class QdrantRepository:
         )
 
         # Keyword indexes for mandatory tenant-isolation filters.
-        for field in ("workspace_id", "revision_id", "source_id", "embedding_profile_version"):
+        for field in (
+            "workspace_id",
+            "revision_id",
+            "source_id",
+            "embedding_profile_version",
+        ):
             await self._client.create_payload_index(
                 collection_name=self._collection,
                 field_name=field,
@@ -157,6 +214,134 @@ class QdrantRepository:
         )
         return result.count
 
+    async def search_dense(
+        self,
+        query_vector: list[float],
+        revision_id: UUID,
+        workspace_id: UUID,
+        embedding_profile_version: str,
+        top_k: int = 25,
+        source_ids: list[UUID] | None = None,
+    ) -> list[ChunkHit]:
+        """Dense vector search scoped to a single tenant revision.
+
+        Applies mandatory keyword filters for workspace_id, revision_id, and
+        embedding_profile_version so results are always tenant-isolated
+        (ARCHITECTURE.md §7.3).  An optional source_ids list narrows the
+        result set further when the caller knows which sources are relevant.
+
+        Qdrant returns results sorted by descending score; no re-sorting is
+        performed here.
+        """
+        search_filter = _build_tenant_filter(
+            workspace_id=workspace_id,
+            revision_id=revision_id,
+            embedding_profile_version=embedding_profile_version,
+            source_ids=source_ids,
+        )
+        _assert_tenant_scoped(search_filter)
+
+        response = await self._client.query_points(
+            collection_name=self._collection,
+            query=query_vector,
+            using="dense",
+            query_filter=search_filter,
+            limit=top_k,
+            with_payload=True,
+        )
+
+        results = [
+            ChunkHit(
+                chunk_id=UUID(point.payload["chunk_id"]),  # type: ignore[index]
+                score=point.score,
+                payload=dict(point.payload) if point.payload else {},
+            )
+            for point in response.points
+        ]
+
+        logger.debug(
+            "qdrant_dense_search",
+            extra={
+                "collection": self._collection,
+                "revision_id": str(revision_id),
+                "workspace_id": str(workspace_id),
+                "top_k": top_k,
+                "hits_returned": len(results),
+            },
+        )
+
+        return results
+
+    async def search_bm25(
+        self,
+        query_text: str,
+        revision_id: UUID,
+        workspace_id: UUID,
+        embedding_profile_version: str,
+        top_k: int = 25,
+        source_ids: list[UUID] | None = None,
+    ) -> list[ChunkHit]:
+        """Full-text (BM25-style) search using Qdrant's text payload index.
+
+        Uses ``client.scroll()`` with a ``MatchText`` filter on the indexed
+        ``"text"`` field, combined with mandatory tenant-isolation conditions
+        (ARCHITECTURE.md §7.3).  Qdrant's text index handles tokenisation and
+        stop-word filtering; it does not return per-document BM25 scores, so
+        every hit is returned with ``score=1.0``.  A downstream reranker is
+        expected to produce calibrated scores before these results are surfaced.
+        """
+        tenant_filter = _build_tenant_filter(
+            workspace_id=workspace_id,
+            revision_id=revision_id,
+            embedding_profile_version=embedding_profile_version,
+            source_ids=source_ids,
+        )
+        _assert_tenant_scoped(tenant_filter)
+
+        # Build the final scroll filter by extending the tenant conditions with
+        # the BM25 text match.  A new Filter is constructed rather than mutating
+        # tenant_filter.must so the type stays list[qmodels.Condition].
+        tenant_must: list[qmodels.Condition] = list(
+            cast(list[qmodels.Condition], tenant_filter.must)
+        )
+        tenant_must.append(
+            qmodels.FieldCondition(
+                key=_TEXT_FIELD,
+                match=qmodels.MatchText(text=query_text),
+            )
+        )
+        scroll_filter = qmodels.Filter(must=tenant_must)
+
+        records, _ = await self._client.scroll(
+            collection_name=self._collection,
+            scroll_filter=scroll_filter,
+            limit=top_k,
+            with_payload=True,
+            with_vectors=False,
+        )
+
+        results = [
+            ChunkHit(
+                chunk_id=UUID(record.payload["chunk_id"]),  # type: ignore[index]
+                score=1.0,
+                payload=dict(record.payload) if record.payload else {},
+            )
+            for record in records
+        ]
+
+        logger.debug(
+            "qdrant_bm25_search",
+            extra={
+                "collection": self._collection,
+                "revision_id": str(revision_id),
+                "workspace_id": str(workspace_id),
+                "top_k": top_k,
+                "hits_returned": len(results),
+            },
+        )
+
+        return results
+
     async def delete_by_revision(self, revision_id: UUID, workspace_id: UUID) -> None:
         """Remove all points for a revision from the collection.
 
@@ -190,7 +375,7 @@ class QdrantRepository:
         )
 
 
-def _build_payload(chunk: Chunk) -> dict:
+def _build_payload(chunk: Chunk) -> dict[str, object]:
     """Build the Qdrant point payload from a Chunk.
 
     All fields that will ever be used as filters must be present here.

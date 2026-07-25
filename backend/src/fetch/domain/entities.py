@@ -108,13 +108,13 @@ class ApiParameter:
 
     id: UUID
     revision_id: UUID
-    operation_id: UUID | None   # None if this is a shared/reusable parameter
+    operation_id: UUID | None  # None if this is a shared/reusable parameter
     name: str
     location: ParameterLocation
     required: bool
     deprecated: bool
     description: str | None
-    schema_json: str | None     # raw JSON Schema for this parameter
+    schema_json: str | None  # raw JSON Schema for this parameter
     example_json: str | None
     source_pointer: str | None  # JSON Pointer to location in the original spec
 
@@ -137,7 +137,7 @@ class ApiResponse:
 
     id: UUID
     operation_id: UUID
-    status_code: str            # "200", "404", "default"
+    status_code: str  # "200", "404", "default"
     description: str | None
     # Maps content-type → JSON Schema string
     content_schemas: dict[str, str]
@@ -157,8 +157,10 @@ class ApiOperation:
     revision_id: UUID
     workspace_id: UUID
     method: HttpMethod
-    path: str                   # raw path as written in the spec, e.g. /v1/Customers/
-    path_normalized: str        # normalized: strip trailing slash, lowercase, e.g. /v1/customers
+    path: str  # raw path as written in the spec, e.g. /v1/Customers/
+    path_normalized: (
+        str  # normalized: strip trailing slash, lowercase, e.g. /v1/customers
+    )
     operation_id: str | None
     summary: str | None
     description: str | None
@@ -205,7 +207,7 @@ class AuthScheme:
     id: UUID
     revision_id: UUID
     workspace_id: UUID
-    name: str                   # the key in #/components/securitySchemes
+    name: str  # the key in #/components/securitySchemes
     scheme_type: AuthSchemeType
     description: str | None
     # Scheme-specific details stored as JSON — varies by AuthSchemeType.
@@ -224,7 +226,7 @@ class ApiExample:
     operation_id: UUID | None
     title: str | None
     description: str | None
-    language: str | None        # "python", "typescript", "curl", etc.
+    language: str | None  # "python", "typescript", "curl", etc.
     content: str
     source_pointer: str | None
 
@@ -236,8 +238,8 @@ class ErrorDefinition:
     id: UUID
     revision_id: UUID
     workspace_id: UUID
-    operation_id: UUID | None   # None if this is a global error definition
-    status_code: str | None     # "404", "429", etc.
+    operation_id: UUID | None  # None if this is a global error definition
+    status_code: str | None  # "404", "429", etc.
     # Provider-specific codes, e.g. "card_declined", "insufficient_funds"
     error_code: str | None
     title: str | None
@@ -278,7 +280,7 @@ class Chunk:
     source_id: UUID
     chunk_type: ChunkType
     # The entity this chunk was projected from.
-    entity_type: str            # "operation", "schema", "auth_scheme", etc.
+    entity_type: str  # "operation", "schema", "auth_scheme", etc.
     entity_id: UUID
     title: str
     # The text that was embedded. Store separately from canonical entities.
@@ -290,7 +292,7 @@ class Chunk:
     # Qdrant point ID — deterministic UUID derived from chunk_id.
     qdrant_point_id: UUID
     # Denormalized payload fields stored in Qdrant for filtering.
-    method: str | None          # "GET", "POST", etc.
+    method: str | None  # "GET", "POST", etc.
     path: str | None
     operation_id: str | None
     tags: list[str] = field(default_factory=list)
@@ -332,7 +334,7 @@ class IngestionJob:
     revision_id: UUID
     workspace_id: UUID
     stage: IngestionStage
-    attempt: int                # starts at 1, increments on each retry
+    attempt: int  # starts at 1, increments on each retry
     # Retry always restarts from QUEUED — no mid-stage resume in v1.
     max_attempts: int
     error_message: str | None
@@ -346,7 +348,7 @@ class IngestionJob:
 class Citation:
     """A server-owned citation linking an answer claim to a source chunk."""
 
-    source_id: str              # query-local ID: "S1", "S2", etc.
+    source_id: str  # query-local ID: "S1", "S2", etc.
     chunk_id: UUID
     entity_type: str
     entity_id: UUID | None
@@ -392,3 +394,10 @@ class QueryRun:
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    # Retrieval trace fields — populated after retrieval, before generation.
+    dense_candidate_count: int | None = None
+    bm25_candidate_count: int | None = None
+    fused_candidate_count: int | None = None
+    reranked_candidate_count: int | None = None
+    expanded_candidate_count: int | None = None
+    exact_match_found: bool = False

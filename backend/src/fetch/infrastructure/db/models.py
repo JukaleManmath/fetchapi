@@ -39,7 +39,9 @@ class WorkspaceModel(Base):
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     sources: Mapped[list["ApiSourceModel"]] = relationship(back_populates="workspace")
 
@@ -60,11 +62,17 @@ class ApiSourceModel(Base):
     source_type: Mapped[str] = mapped_column(String(50), nullable=False)
     config_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     config_object_key: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
     workspace: Mapped["WorkspaceModel"] = relationship(back_populates="sources")
-    revisions: Mapped[list["SourceRevisionModel"]] = relationship(back_populates="source")
+    revisions: Mapped[list["SourceRevisionModel"]] = relationship(
+        back_populates="source"
+    )
 
     __table_args__ = (Index("ix_api_sources_workspace", "workspace_id"),)
 
@@ -86,16 +94,26 @@ class SourceRevisionModel(Base):
     api_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     expected_chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     actual_chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    activated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    failed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     source: Mapped["ApiSourceModel"] = relationship(back_populates="revisions")
     jobs: Mapped[list["IngestionJobModel"]] = relationship(back_populates="revision")
-    operations: Mapped[list["ApiOperationModel"]] = relationship(back_populates="revision")
+    operations: Mapped[list["ApiOperationModel"]] = relationship(
+        back_populates="revision"
+    )
     schemas: Mapped[list["ApiSchemaModel"]] = relationship(back_populates="revision")
-    auth_schemes: Mapped[list["AuthSchemeModel"]] = relationship(back_populates="revision")
+    auth_schemes: Mapped[list["AuthSchemeModel"]] = relationship(
+        back_populates="revision"
+    )
     servers: Mapped[list["ApiServerModel"]] = relationship(back_populates="revision")
     examples: Mapped[list["ApiExampleModel"]] = relationship(back_populates="revision")
     error_definitions: Mapped[list["ErrorDefinitionModel"]] = relationship(
@@ -130,10 +148,18 @@ class IngestionJobModel(Base):
     attempt: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     revision: Mapped["SourceRevisionModel"] = relationship(back_populates="jobs")
 
@@ -190,7 +216,9 @@ class ApiOperationModel(Base):
     logical_key: Mapped[str] = mapped_column(Text, nullable=False)
     source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
     # list of dicts: [{"bearerAuth": []}, {"apiKey": ["read"]}]
-    security_requirements: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    security_requirements: Mapped[list] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
 
     revision: Mapped["SourceRevisionModel"] = relationship(back_populates="operations")
     parameters: Mapped[list["ApiParameterModel"]] = relationship(
@@ -231,7 +259,9 @@ class ApiParameterModel(Base):
     example_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    operation: Mapped["ApiOperationModel | None"] = relationship(back_populates="parameters")
+    operation: Mapped["ApiOperationModel | None"] = relationship(
+        back_populates="parameters"
+    )
 
     __table_args__ = (Index("ix_api_parameters_operation", "operation_id"),)
 
@@ -295,7 +325,9 @@ class ApiSchemaModel(Base):
     revision: Mapped["SourceRevisionModel"] = relationship(back_populates="schemas")
 
     __table_args__ = (
-        UniqueConstraint("revision_id", "logical_key", name="uq_schemas_revision_logical_key"),
+        UniqueConstraint(
+            "revision_id", "logical_key", name="uq_schemas_revision_logical_key"
+        ),
         Index("ix_api_schemas_revision", "revision_id"),
     )
 
@@ -316,7 +348,9 @@ class AuthSchemeModel(Base):
     # scheme-specific JSON: {"in": "header", "name": "X-API-Key"} or {"flows": {...}}
     details_json: Mapped[str] = mapped_column(Text, nullable=False)
 
-    revision: Mapped["SourceRevisionModel"] = relationship(back_populates="auth_schemes")
+    revision: Mapped["SourceRevisionModel"] = relationship(
+        back_populates="auth_schemes"
+    )
 
     __table_args__ = (
         UniqueConstraint("revision_id", "name", name="uq_auth_schemes_revision_name"),
@@ -334,7 +368,9 @@ class ApiExampleModel(Base):
         nullable=False,
     )
     workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
-    operation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
+    operation_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -356,14 +392,18 @@ class ErrorDefinitionModel(Base):
         nullable=False,
     )
     workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
-    operation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
+    operation_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
     status_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(255), nullable=True)
     title: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    revision: Mapped["SourceRevisionModel"] = relationship(back_populates="error_definitions")
+    revision: Mapped["SourceRevisionModel"] = relationship(
+        back_populates="error_definitions"
+    )
 
     __table_args__ = (Index("ix_error_definitions_revision", "revision_id"),)
 
@@ -382,9 +422,13 @@ class EmbeddingProfileModel(Base):
     sparse_model_id: Mapped[str] = mapped_column(Text, nullable=False)
     collection_name: Mapped[str] = mapped_column(Text, nullable=False)
     distance_metric: Mapped[str] = mapped_column(String(20), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
 
-    chunks: Mapped[list["ChunkModel"]] = relationship(back_populates="embedding_profile")
+    chunks: Mapped[list["ChunkModel"]] = relationship(
+        back_populates="embedding_profile"
+    )
 
 
 # ── Chunks ────────────────────────────────────────────────────────────────────
@@ -420,15 +464,21 @@ class ChunkModel(Base):
     path: Mapped[str | None] = mapped_column(Text, nullable=True)
     operation_id_str: Mapped[str | None] = mapped_column(Text, nullable=True)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
-    status_codes: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
+    status_codes: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, default=list
+    )
     api_version: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    embedding_profile: Mapped["EmbeddingProfileModel"] = relationship(back_populates="chunks")
+    embedding_profile: Mapped["EmbeddingProfileModel"] = relationship(
+        back_populates="chunks"
+    )
 
     __table_args__ = (
-        UniqueConstraint("revision_id", "content_hash", name="uq_chunks_revision_content_hash"),
+        UniqueConstraint(
+            "revision_id", "content_hash", name="uq_chunks_revision_content_hash"
+        ),
         Index("ix_chunks_revision", "revision_id"),
         Index("ix_chunks_entity", "entity_type", "entity_id"),
         Index("ix_chunks_workspace", "workspace_id"),
@@ -457,9 +507,55 @@ class ChunkRelationModel(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "from_chunk_id", "to_chunk_id", "relation_type",
+            "from_chunk_id",
+            "to_chunk_id",
+            "relation_type",
             name="uq_chunk_relations_edge",
         ),
         Index("ix_chunk_relations_from", "from_chunk_id"),
         Index("ix_chunk_relations_revision", "revision_id"),
+    )
+
+
+# ── Query runs ────────────────────────────────────────────────────────────────
+
+
+class QueryRunModel(Base):
+    __tablename__ = "query_runs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    revision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    workflow: Mapped[str] = mapped_column(String(50), nullable=False)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Citations stored as a JSONB array of serialised Citation dicts.
+    citations: Mapped[list[object]] = mapped_column(JSONB, nullable=False, default=list)
+    support_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    warnings: Mapped[list[object]] = mapped_column(JSONB, nullable=False, default=list)
+    # Latency breakdown in milliseconds.
+    retrieval_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Token usage.
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Retrieval trace fields.
+    dense_candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    bm25_candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fused_candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reranked_candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    expanded_candidate_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    exact_match_found: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_query_runs_source", "source_id"),
+        Index("ix_query_runs_workspace", "workspace_id"),
+        Index("ix_query_runs_created_at", "source_id", "created_at"),
     )

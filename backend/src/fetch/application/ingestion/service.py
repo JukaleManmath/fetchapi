@@ -317,7 +317,14 @@ async def _run_pipeline(
         )
         all_relations.extend(relations)
 
-    all_chunks: list[Chunk] = op_chunks + schema_chunks + auth_chunks + error_chunks
+    all_chunks_raw: list[Chunk] = op_chunks + schema_chunks + auth_chunks + error_chunks
+    # Deduplicate by UUID — deterministic IDs mean identical content gets the same UUID.
+    seen_ids: set = set()
+    all_chunks: list[Chunk] = []
+    for c in all_chunks_raw:
+        if c.id not in seen_ids:
+            seen_ids.add(c.id)
+            all_chunks.append(c)
 
     async with get_session() as session:
         chunk_repo = PgChunkRepository(session)
