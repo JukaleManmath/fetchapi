@@ -34,6 +34,7 @@ export default async function AuthPage({ params }: Props) {
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="px-7 py-6 space-y-4">
       <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
         {schemes.length} scheme{schemes.length !== 1 ? "s" : ""}
@@ -58,6 +59,7 @@ export default async function AuthPage({ params }: Props) {
           ))}
         </ul>
       </ScrollRevealContainer>
+    </div>
     </div>
   );
 }

@@ -12,8 +12,8 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: "Sources", href: "/",       icon: <Database size={14} /> },
-  { label: "Ingest",  href: "/ingest", icon: <Upload   size={14} /> },
+  { label: "Sources", href: "/",       icon: <Database size={16} /> },
+  { label: "Ingest",  href: "/ingest", icon: <Upload   size={16} /> },
 ];
 
 export function Sidebar() {
@@ -45,7 +45,7 @@ export function Sidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-2 rounded text-xs transition-all duration-150",
+                    "flex items-center gap-2.5 px-3 py-2.5 rounded text-sm transition-all duration-150",
                     isActive
                       ? "bg-ink text-canvas font-medium"
                       : "text-ink-2 hover:text-ink hover:bg-surface-2"

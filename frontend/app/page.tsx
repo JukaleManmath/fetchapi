@@ -24,9 +24,9 @@ export default async function SourcesPage() {
   const sources = await getSources();
 
   return (
-    <div>
-      {/* Dot grid hero band */}
-      <div className="dot-grid border-b border-border-1">
+    <div className="min-h-full dot-grid">
+      {/* Header — solid so it reads clearly over the dots */}
+      <div className="bg-canvas border-b border-border-1">
         <PageHeader
           title="Sources"
           description="Ingested OpenAPI specs available for querying through MCP and HTTP."
@@ -38,7 +38,6 @@ export default async function SourcesPage() {
               </Button>
             </Link>
           }
-          className="bg-canvas/80 backdrop-blur-sm"
         />
       </div>
 

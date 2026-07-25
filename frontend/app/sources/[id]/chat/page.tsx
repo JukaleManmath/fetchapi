@@ -78,9 +78,32 @@ export default function ChatPage({ params }: Props) {
     );
   }, [params.id]);
 
+  /* Empty state — input centered in the page */
+  if (messages.length === 0) {
+    return (
+      <div className="relative flex flex-col items-center justify-center h-full px-6">
+        {/* Gradient overlay so dot-grid doesn't compete with text */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(255,255,255,0.6)_0%,transparent_100%)]" />
+        <div className="relative z-10 w-full max-w-2xl space-y-8">
+          <div className="text-center space-y-2">
+            <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Chat</p>
+            <h2 className="text-2xl font-semibold text-ink">Ask about this API</h2>
+            <p className="text-sm text-ink-3 leading-relaxed">
+              Ask anything — operations, parameters, authentication, error codes.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border-1 bg-canvas shadow-card overflow-hidden">
+            <ChatInput onSend={handleSend} disabled={streaming} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* Active chat — thread scrolls, input pinned at bottom */
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <ChatThread messages={messages} />
       </div>
       <ChatInput onSend={handleSend} disabled={streaming} />

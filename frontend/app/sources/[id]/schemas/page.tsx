@@ -66,6 +66,7 @@ export default function SchemasPage({ params }: Props) {
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="px-7 py-6 space-y-4">
       <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
         {schemas.length} schema{schemas.length !== 1 ? "s" : ""}
@@ -127,6 +128,7 @@ export default function SchemasPage({ params }: Props) {
           );
         })}
       </ul>
+    </div>
     </div>
   );
 }

@@ -63,6 +63,7 @@ export default function OperationsPage({ params }: Props) {
   }, {});
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="px-7 py-6 space-y-8">
       <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
         {operations.length} operation{operations.length !== 1 ? "s" : ""}
@@ -151,6 +152,7 @@ export default function OperationsPage({ params }: Props) {
           </ul>
         </section>
       ))}
+    </div>
     </div>
   );
 }

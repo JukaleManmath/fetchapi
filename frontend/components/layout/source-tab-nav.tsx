@@ -16,7 +16,7 @@ export function SourceTabNav({ tabs }: { tabs: Tab[] }) {
 
   return (
     <nav
-      className="flex items-center gap-0 px-7 border-b border-border-1 overflow-x-auto"
+      className="flex items-center gap-0 px-4 border-b border-border-1 overflow-x-auto shrink-0 bg-canvas"
       aria-label="Source sections"
     >
       {tabs.map((tab) => {
@@ -27,7 +27,7 @@ export function SourceTabNav({ tabs }: { tabs: Tab[] }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-3 text-xs border-b-2 transition-all duration-150 whitespace-nowrap",
+              "flex items-center gap-2 px-4 py-3.5 text-sm border-b-2 transition-all duration-150 whitespace-nowrap",
               isActive
                 ? "border-ink text-ink font-medium"
                 : "border-transparent text-ink-3 hover:text-ink hover:border-border-2"

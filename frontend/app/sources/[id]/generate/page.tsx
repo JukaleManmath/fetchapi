@@ -43,11 +43,12 @@ export default function GeneratePage({ params }: Props) {
   }
 
   return (
-    <div className="px-7 py-6 space-y-6 max-w-3xl">
-      <div className="space-y-1">
-        <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Generate</p>
-        <h2 className="text-sm font-semibold text-ink">Integration code</h2>
-        <p className="text-xs text-ink-3">Select an operation and language to generate working integration code backed by the spec.</p>
+    <div className="h-full overflow-y-auto">
+    <div className="px-8 py-8 space-y-8 w-full max-w-4xl">
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Generate</p>
+        <h2 className="text-xl font-semibold text-ink">Integration code</h2>
+        <p className="text-sm text-ink-3">Select an operation and language to generate working integration code backed by the spec.</p>
       </div>
 
       {operations.length === 0 ? (
@@ -59,7 +60,7 @@ export default function GeneratePage({ params }: Props) {
       ) : (
         <>
           <div className="space-y-3">
-            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Operation</p>
+            <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Operation</p>
             <OperationPicker
               operations={operations}
               selected={selected}
@@ -68,7 +69,7 @@ export default function GeneratePage({ params }: Props) {
           </div>
 
           <div className="space-y-3">
-            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Language</p>
+            <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Language</p>
             <LanguageSelector selected={language} onSelect={setLanguage} />
           </div>
 
@@ -88,7 +89,7 @@ export default function GeneratePage({ params }: Props) {
             <div className="space-y-4">
               <CodeBlock code={result.code} language={result.language} />
               <div className="space-y-2">
-                <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Validation</p>
+                <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Validation</p>
                 <ValidationReport
                   contractIssues={result.contract_issues}
                   syntaxIssues={result.syntax_issues}
@@ -98,6 +99,7 @@ export default function GeneratePage({ params }: Props) {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }

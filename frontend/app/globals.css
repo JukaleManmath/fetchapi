@@ -139,7 +139,7 @@ code, kbd, pre, .font-mono {
    ---------------------------------------------------------------------- */
 
 .dot-grid {
-  background-image: radial-gradient(circle, #D4D4D8 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(212, 212, 216, 0.45) 1px, transparent 1px);
   background-size: 28px 28px;
 }
 

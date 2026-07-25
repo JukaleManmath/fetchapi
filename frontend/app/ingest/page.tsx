@@ -11,45 +11,45 @@ export default function IngestPage() {
 
   return (
     <div className="relative min-h-full flex flex-col items-center justify-center px-6 py-16 dot-grid">
-      {/* Fade-out gradient over the dot grid so edges are clean */}
+      {/* Radial fade: bright center, dots fade at edges */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,transparent_40%,rgba(255,255,255,0.85)_100%)]" />
+      {/* Top and bottom hard fade so the header/footer feel grounded */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-canvas via-transparent to-canvas" />
 
-      <div className="relative z-10 w-full max-w-2xl animate-fade-up">
-        {/* Hero copy */}
-        <div className="text-center mb-10">
-          <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest mb-3">
+      <div className="relative z-10 w-full max-w-xl animate-fade-up">
+        {/* Hero */}
+        <div className="text-center mb-10 space-y-3">
+          <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">
             FetchAPI / Ingest
           </p>
-          <h1 className="text-4xl font-bold text-ink leading-tight">
+          <h1 className="text-4xl font-bold text-ink leading-tight tracking-tight">
             Ingest an OpenAPI spec
           </h1>
-          <p className="mt-3 text-sm text-ink-3 leading-relaxed max-w-md mx-auto">
+          <p className="text-sm text-ink-3 leading-relaxed max-w-sm mx-auto">
             Upload a file or point to a public URL. FetchAPI parses, validates,
-            and indexes it - your AI assistant is ready in seconds.
+            and indexes it so your AI assistant is ready in seconds.
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-canvas border border-border-2 rounded-xl shadow-card-lg overflow-hidden">
-          {job ? (
-            <div className="px-8 py-8">
+        <div className="bg-canvas border border-border-2 rounded-2xl shadow-card-lg overflow-hidden">
+          <div className="px-8 py-8">
+            {job ? (
               <JobTracker
                 job={job}
                 onReset={() => setJob(null)}
                 onView={() => router.push(`/sources/${job.source_id}`)}
               />
-            </div>
-          ) : (
-            <div className="px-8 py-8">
+            ) : (
               <IngestForm onJobCreated={setJob} />
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Footer note */}
         {!job && (
           <p className="mt-5 text-center text-2xs font-mono text-ink-4">
-            Supports OpenAPI 3.0 and 3.1 - JSON or YAML - up to 10 MB
+            Supports OpenAPI 3.0 and 3.1 &middot; JSON or YAML &middot; up to 10 MB
           </p>
         )}
       </div>

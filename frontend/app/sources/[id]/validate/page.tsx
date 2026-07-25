@@ -30,11 +30,12 @@ export default function ValidatePage({ params }: Props) {
   }
 
   return (
-    <div className="px-7 py-6 space-y-6 max-w-3xl">
-      <div className="space-y-1">
-        <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Validate</p>
-        <h2 className="text-sm font-semibold text-ink">Request debugger</h2>
-        <p className="text-xs text-ink-3">Paste a curl command to validate it against the spec. Get findings and a corrected example.</p>
+    <div className="h-full overflow-y-auto">
+    <div className="px-8 py-8 space-y-8 w-full max-w-4xl">
+      <div className="space-y-2">
+        <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Validate</p>
+        <h2 className="text-xl font-semibold text-ink">Request debugger</h2>
+        <p className="text-sm text-ink-3">Paste a curl command to validate it against the spec. Get findings and a corrected example.</p>
       </div>
 
       <CurlInput onValidate={handleValidate} loading={loading} />
@@ -44,12 +45,12 @@ export default function ValidatePage({ params }: Props) {
       {result && (
         <div className="space-y-5">
           <div className="space-y-2">
-            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Matched operation</p>
+            <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">Matched operation</p>
             <MatchedOperation operation={result.matched_operation} />
           </div>
 
           <div className="space-y-2">
-            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
+            <p className="text-xs font-mono text-ink-4 uppercase tracking-widest">
               Findings
               {result.is_valid && (
                 <span className="ml-2 text-green-600">· valid</span>
@@ -63,6 +64,7 @@ export default function ValidatePage({ params }: Props) {
           )}
         </div>
       )}
+    </div>
     </div>
   );
 }
