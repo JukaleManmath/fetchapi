@@ -23,8 +23,6 @@ from fetch.infrastructure.db.repositories import (
     PgJobRepository,
     PgOperationRepository,
     PgRevisionRepository,
-    PgSchemaRepository,
-    PgSourceRepository,
 )
 from fetch.infrastructure.db.session import close_db, get_session, init_db
 

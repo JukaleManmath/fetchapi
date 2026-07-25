@@ -553,6 +553,8 @@ class QueryRunModel(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+    intent_classification: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     __table_args__ = (
         Index("ix_query_runs_source", "source_id"),

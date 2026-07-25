@@ -11,7 +11,6 @@ from fetch.infrastructure.openapi.validator import (
     load_yaml_safe,
 )
 
-
 # ── load_yaml_safe ────────────────────────────────────────────────────────────
 
 
@@ -82,6 +81,7 @@ def test_detect_version_missing() -> None:
 async def test_load_and_resolve_petstore() -> None:
     """Smoke test: load the Petstore fixture end-to-end."""
     import pathlib
+
     from fetch.infrastructure.openapi.validator import load_and_resolve
 
     fixture = (
@@ -100,6 +100,7 @@ async def test_load_and_resolve_petstore() -> None:
 async def test_load_and_resolve_invalid_spec() -> None:
     """An invalid spec (missing info) should raise IngestionError."""
     import pathlib
+
     from fetch.infrastructure.openapi.validator import load_and_resolve
 
     fixture = (

@@ -192,9 +192,7 @@ _STOP_WORDS: frozenset[str] = frozenset(
 )
 
 # Matches HTTP method as a standalone token (whole word, case-insensitive).
-_HTTP_METHOD_RE = re.compile(
-    r"\b(GET|POST|PUT|DELETE|PATCH)\b", re.IGNORECASE
-)
+_HTTP_METHOD_RE = re.compile(r"\b(GET|POST|PUT|DELETE|PATCH)\b", re.IGNORECASE)
 
 # Matches URL path segments starting with /, including {param} placeholders.
 # Stops at whitespace, comma, or closing punctuation.

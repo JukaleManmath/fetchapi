@@ -75,13 +75,13 @@ def _assert_tenant_scoped(filter: qmodels.Filter) -> None:
     """Raise AssertionError if mandatory tenant fields are missing from filter.must."""
     required = {"workspace_id", "revision_id", "embedding_profile_version"}
     present = {
-        c.key
-        for c in (filter.must or [])
-        if isinstance(c, qmodels.FieldCondition)
+        c.key for c in (filter.must or []) if isinstance(c, qmodels.FieldCondition)
     }
     missing = required - present
     if missing:
-        raise AssertionError(f"Qdrant query missing mandatory tenant filters: {missing}")
+        raise AssertionError(
+            f"Qdrant query missing mandatory tenant filters: {missing}"
+        )
 
 
 class QdrantRepository:

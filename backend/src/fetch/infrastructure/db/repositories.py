@@ -937,6 +937,8 @@ def _map_query_run(row: QueryRunModel) -> QueryRun:
         expanded_candidate_count=row.expanded_candidate_count,
         exact_match_found=row.exact_match_found,
         created_at=row.created_at,
+        intent_classification=row.intent_classification,
+        prompt_version=row.prompt_version,
     )
 
 
@@ -975,6 +977,8 @@ class PgQueryRunRepository:
                 expanded_candidate_count=run.expanded_candidate_count,
                 exact_match_found=run.exact_match_found,
                 created_at=run.created_at,
+                intent_classification=run.intent_classification,
+                prompt_version=run.prompt_version,
             )
             .on_conflict_do_update(
                 index_elements=["id"],
@@ -994,6 +998,8 @@ class PgQueryRunRepository:
                     "reranked_candidate_count": run.reranked_candidate_count,
                     "expanded_candidate_count": run.expanded_candidate_count,
                     "exact_match_found": run.exact_match_found,
+                    "intent_classification": run.intent_classification,
+                    "prompt_version": run.prompt_version,
                 },
             )
         )

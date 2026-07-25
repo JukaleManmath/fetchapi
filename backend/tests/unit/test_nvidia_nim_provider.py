@@ -60,9 +60,7 @@ async def test_generate_returns_content(provider: NvidiaNimProvider) -> None:
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = "Hello back"
 
-    provider._llm_client.chat.completions.create = AsyncMock(
-        return_value=mock_response
-    )
+    provider._llm_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
     result = await provider.generate(_MESSAGES, _CONFIG)
     assert result == "Hello back"
@@ -76,9 +74,7 @@ async def test_generate_empty_content_returns_empty_string(
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = None
 
-    provider._llm_client.chat.completions.create = AsyncMock(
-        return_value=mock_response
-    )
+    provider._llm_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
     result = await provider.generate(_MESSAGES, _CONFIG)
     assert result == ""

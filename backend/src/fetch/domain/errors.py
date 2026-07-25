@@ -120,6 +120,15 @@ class SchemaNotFoundError(RetrievalError):
 class InsufficientEvidenceError(RetrievalError):
     """Not enough evidence was retrieved to answer the query."""
 
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
+class CitationValidationError(FetchError):
+    def __init__(self, message: str, unknown_ids: list[str]) -> None:
+        super().__init__(message)
+        self.unknown_ids = unknown_ids
+
 
 # ── Storage errors ─────────────────────────────────────────────────────────────
 

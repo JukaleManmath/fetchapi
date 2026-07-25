@@ -18,10 +18,10 @@ class SourceType(StrEnum):
 class RevisionStatus(StrEnum):
     """Lifecycle state of a source revision."""
 
-    BUILDING = "building"       # ingestion is in progress
-    ACTIVE = "active"           # this revision is the current queryable version
-    FAILED = "failed"           # ingestion failed — never activated
-    SUPERSEDED = "superseded"   # a newer revision replaced this one
+    BUILDING = "building"  # ingestion is in progress
+    ACTIVE = "active"  # this revision is the current queryable version
+    FAILED = "failed"  # ingestion failed — never activated
+    SUPERSEDED = "superseded"  # a newer revision replaced this one
 
 
 class IngestionStage(StrEnum):

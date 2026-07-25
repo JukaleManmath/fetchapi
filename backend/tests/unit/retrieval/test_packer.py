@@ -10,7 +10,9 @@ def _chunk_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
-def _hit(chunk_id: uuid.UUID | None = None, score: float = 0.9, **payload_fields) -> ChunkHit:
+def _hit(
+    chunk_id: uuid.UUID | None = None, score: float = 0.9, **payload_fields
+) -> ChunkHit:
     cid = chunk_id or _chunk_id()
     return ChunkHit(chunk_id=cid, score=score, payload=payload_fields)
 

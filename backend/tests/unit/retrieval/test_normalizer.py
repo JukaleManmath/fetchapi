@@ -69,7 +69,9 @@ def test_extracts_plain_path(normalizer: QueryNormalizer) -> None:
 
 
 def test_extracts_nested_path(normalizer: QueryNormalizer) -> None:
-    result = normalizer.normalize("Tell me about /v2/users/{user_id}/addresses/{addr_id}")
+    result = normalizer.normalize(
+        "Tell me about /v2/users/{user_id}/addresses/{addr_id}"
+    )
     assert result.path_pattern == "/v2/users/{user_id}/addresses/{addr_id}"
 
 
@@ -127,7 +129,9 @@ def test_common_pascal_words_excluded(normalizer: QueryNormalizer) -> None:
 
 
 def test_multiple_schema_names(normalizer: QueryNormalizer) -> None:
-    result = normalizer.normalize("What is the relationship between PaymentIntent and PaymentMethod?")
+    result = normalizer.normalize(
+        "What is the relationship between PaymentIntent and PaymentMethod?"
+    )
     assert "PaymentIntent" in result.schema_names
     assert "PaymentMethod" in result.schema_names
 

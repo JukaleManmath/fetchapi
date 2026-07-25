@@ -6,21 +6,18 @@ No database, no network, no external services.
 import json
 from uuid import uuid4
 
-import pytest
-
 from fetch.infrastructure.openapi.extractor import (
+    MAX_SCHEMA_DEPTH,
     extract_api_title,
     extract_api_version,
     extract_auth_schemes,
     extract_operations,
+    extract_schema_json,
     extract_schemas,
     extract_servers,
     normalize_path,
     normalize_schema_types,
-    extract_schema_json,
-    MAX_SCHEMA_DEPTH,
 )
-
 
 REVISION_ID = uuid4()
 WORKSPACE_ID = uuid4()
@@ -162,7 +159,10 @@ def test_extract_schemas_basic() -> None:
             "schemas": {
                 "Customer": {
                     "type": "object",
-                    "properties": {"id": {"type": "string"}, "name": {"type": "string"}},
+                    "properties": {
+                        "id": {"type": "string"},
+                        "name": {"type": "string"},
+                    },
                     "required": ["id"],
                 }
             }
@@ -177,13 +177,7 @@ def test_extract_schemas_basic() -> None:
 
 
 def test_extract_schemas_nullable_31() -> None:
-    doc = {
-        "components": {
-            "schemas": {
-                "MaybeString": {"type": ["string", "null"]}
-            }
-        }
-    }
+    doc = {"components": {"schemas": {"MaybeString": {"type": ["string", "null"]}}}}
     schemas = extract_schemas(doc, REVISION_ID, WORKSPACE_ID, SOURCE_ID, "1.0.0")
     assert schemas[0].nullable is True
 
@@ -264,11 +258,7 @@ def test_extract_operations_request_body() -> None:
                 "post": {
                     "requestBody": {
                         "required": True,
-                        "content": {
-                            "application/json": {
-                                "schema": {"type": "object"}
-                            }
-                        },
+                        "content": {"application/json": {"schema": {"type": "object"}}},
                     },
                     "responses": {"201": {"description": "Created"}},
                 }

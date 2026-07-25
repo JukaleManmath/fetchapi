@@ -24,11 +24,7 @@ from fetch.infrastructure.qdrant.repository import (
 
 def _keys_in_must(f: qmodels.Filter) -> set[str]:
     """Return the set of FieldCondition keys present in filter.must."""
-    return {
-        c.key
-        for c in (f.must or [])
-        if isinstance(c, qmodels.FieldCondition)
-    }
+    return {c.key for c in (f.must or []) if isinstance(c, qmodels.FieldCondition)}
 
 
 # ── _build_tenant_filter ──────────────────────────────────────────────────────
@@ -75,7 +71,8 @@ def test_build_tenant_filter_with_source_ids_adds_fourth_condition() -> None:
 
     # Confirm the source_id condition is a MatchAny containing both UUIDs.
     source_condition = next(
-        c for c in f.must
+        c
+        for c in f.must
         if isinstance(c, qmodels.FieldCondition) and c.key == "source_id"
     )
     assert isinstance(source_condition.match, qmodels.MatchAny)
@@ -93,7 +90,8 @@ def test_build_tenant_filter_encodes_uuids_as_strings() -> None:
     )
 
     ws_condition = next(
-        c for c in (f.must or [])
+        c
+        for c in (f.must or [])
         if isinstance(c, qmodels.FieldCondition) and c.key == "workspace_id"
     )
     assert isinstance(ws_condition.match, qmodels.MatchValue)
