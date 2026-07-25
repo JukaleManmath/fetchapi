@@ -12,7 +12,7 @@ export function PageHeader({ title, description, action, className }: PageHeader
   return (
     <div className={cn("flex items-start justify-between gap-4 px-7 py-6 border-b border-border-1", className)}>
       <div>
-        <h1 className="text-lg font-display font-bold text-ink">{title}</h1>
+        <h1 className="text-lg font-bold text-ink">{title}</h1>
         {description && (
           <p className="mt-1 text-xs text-ink-3 leading-relaxed">{description}</p>
         )}

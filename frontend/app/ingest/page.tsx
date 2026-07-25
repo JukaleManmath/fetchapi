@@ -20,7 +20,7 @@ export default function IngestPage() {
           <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest mb-3">
             FetchAPI / Ingest
           </p>
-          <h1 className="font-display text-4xl font-bold text-ink leading-tight">
+          <h1 className="text-4xl font-bold text-ink leading-tight">
             Ingest an OpenAPI spec
           </h1>
           <p className="mt-3 text-sm text-ink-3 leading-relaxed max-w-md mx-auto">
