@@ -39,6 +39,15 @@ export default function ChatPage({ params }: Props) {
           )
         );
       },
+      (evidenceCitations) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, evidence_citations: evidenceCitations }
+              : m
+          )
+        );
+      },
       (citations: Citation[], supportStatus: string) => {
         setMessages((prev) =>
           prev.map((m) =>

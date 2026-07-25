@@ -363,6 +363,9 @@ class Citation:
     api_version: str | None
     method: str | None
     path: str | None
+    reranker_score: float | None = None
+    rrf_score: float | None = None
+    chunk_text: str | None = None
 
 
 @dataclass

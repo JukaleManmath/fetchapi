@@ -131,6 +131,7 @@ export function streamQuery(
   sourceId: string,
   query: string,
   onToken: (token: string) => void,
+  onEvidence: (citations: Citation[]) => void,
   onResult: (citations: Citation[], supportStatus: string) => void,
   onDone: () => void,
   onError: (err: Error) => void,
@@ -168,8 +169,9 @@ export function streamQuery(
           if (!json || json === "[DONE]") continue;
           try {
             const event = JSON.parse(json);
-            if (event.type === "token") onToken(event.token);
-            if (event.type === "result") onResult(event.citations ?? [], event.support_status ?? "");
+            if (event.type === "evidence") onEvidence(event.citations ?? []);
+            if (event.type === "token") onToken(event.token ?? event.text ?? "");
+            if (event.type === "result") onResult(event.cited_source_ids ?? [], event.support_status ?? "");
             if (event.type === "done") onDone();
           } catch {
             // malformed event — skip
