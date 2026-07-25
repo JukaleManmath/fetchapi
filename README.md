@@ -403,7 +403,7 @@ fetchapi/
 - [x] **Phase 2** - Chunking and vector indexing: operation/schema/auth chunk projections, Qdrant upsert, BM25 indexing
 - [x] **Phase 3** - Hybrid retrieval: dense + sparse + RRF fusion + cross-encoder reranking + relationship expansion *(MRR and Recall@K evaluation pending)*
 - [x] **Phase 4** - Grounded Q&A: streamed answers with deterministic citation mapping, support status, abstention
-- [ ] **Phase 5** - Integration code generation: Python, TypeScript, Java with spec-backed validation
+- [x] **Phase 5** - Integration code generation: Python, TypeScript, Java with spec-backed validation
 - [ ] **Phase 6** - Request validation and error diagnosis: deterministic schema-backed validation, curl parsing
 - [ ] **Phase 7** - MCP server: 9 structured tools wired to application services
 - [ ] **Phase 8** - Next.js web UI: ingest, chat, explorer, validation panel, retrieval inspector
