@@ -498,6 +498,50 @@ class RequestDiagnostic:
     is_valid: bool
 
 
+# ── Version diff entities ─────────────────────────────────────────────────────
+
+
+@dataclass
+class OperationDiff:
+    operation_id: UUID
+    method: str
+    path: str
+    change_type: str  # "added" | "removed" | "changed"
+    changed_fields: list[str]  # e.g. ["description", "parameters"]
+
+
+@dataclass
+class SchemaDiff:
+    schema_id: UUID
+    name: str
+    change_type: str  # "added" | "removed" | "changed"
+    changed_fields: list[str]
+
+
+@dataclass
+class AuthDiff:
+    name: str
+    change_type: str  # "added" | "removed" | "changed"
+
+
+@dataclass
+class VersionDiff:
+    source_id: UUID
+    revision_a_id: UUID
+    revision_b_id: UUID
+    revision_a_version: str
+    revision_b_version: str
+    operations_added: list[OperationDiff]
+    operations_removed: list[OperationDiff]
+    operations_changed: list[OperationDiff]
+    schemas_added: list[SchemaDiff]
+    schemas_removed: list[SchemaDiff]
+    schemas_changed: list[SchemaDiff]
+    auth_added: list[AuthDiff]
+    auth_removed: list[AuthDiff]
+    summary: str  # e.g. "3 operations added, 1 removed, 2 schemas changed"
+
+
 @dataclass
 class RequestDiagnosticRun:
     id: UUID

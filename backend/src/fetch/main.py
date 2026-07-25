@@ -22,6 +22,7 @@ from fetch.config import get_settings
 from fetch.infrastructure.db.session import close_db, init_db
 from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
 from fetch.infrastructure.qdrant.repository import QdrantRepository
+from fetch.mcp.server import mcp as mcp_server
 
 
 @asynccontextmanager
@@ -61,6 +62,9 @@ app.include_router(operations_router)
 app.include_router(queries_router)
 app.include_router(integrations_router)
 app.include_router(validation_router)
+
+# Mount MCP Streamable HTTP transport
+app.mount("/mcp", mcp_server.streamable_http_app())
 
 
 @app.get("/health/live", tags=["health"], include_in_schema=False)

@@ -391,3 +391,21 @@ class DiagnosticRunRepository(Protocol):
     async def list_by_source(
         self, source_id: UUID, limit: int = 50
     ) -> list[RequestDiagnosticRun]: ...
+
+
+class VersionDiffRepository(Protocol):
+    async def find_revision_by_source_and_label(
+        self, source_id: UUID, version_label: str
+    ) -> SourceRevision | None: ...
+
+    async def list_operations_for_revision(
+        self, revision_id: UUID
+    ) -> list[ApiOperation]: ...
+
+    async def list_schemas_for_revision(
+        self, revision_id: UUID
+    ) -> list[ApiSchema]: ...
+
+    async def list_auth_for_revision(
+        self, revision_id: UUID
+    ) -> list[AuthScheme]: ...
