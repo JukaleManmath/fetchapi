@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Database, Upload, MessageSquare, ShieldCheck, Code2, BarChart3 } from "lucide-react";
+import { Database, Upload, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -13,12 +13,9 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: "Sources",  href: "/",         icon: <Database   size={14} /> },
-  { label: "Ingest",   href: "/ingest",   icon: <Upload     size={14} /> },
-  { label: "Chat",     href: "/chat",     icon: <MessageSquare size={14} />, phase: "4" },
-  { label: "Generate", href: "/generate", icon: <Code2      size={14} />, phase: "5" },
-  { label: "Validate", href: "/validate", icon: <ShieldCheck size={14} />, phase: "6" },
-  { label: "Eval",     href: "/eval",     icon: <BarChart3  size={14} />, phase: "9" },
+  { label: "Sources", href: "/",       icon: <Database  size={14} /> },
+  { label: "Ingest",  href: "/ingest", icon: <Upload    size={14} /> },
+  { label: "Eval",    href: "/eval",   icon: <BarChart3 size={14} />, phase: "9" },
 ];
 
 export function Sidebar() {
@@ -86,7 +83,7 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="px-5 py-4 border-t border-border-1 space-y-1">
-        <p className="text-2xs font-mono text-ink-4">Phase 2 - Chunking</p>
+        <p className="text-2xs font-mono text-ink-4">Phase 8 complete</p>
         <a
           href="http://localhost:8000/docs"
           target="_blank"
