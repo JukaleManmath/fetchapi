@@ -406,7 +406,7 @@ fetchapi/
 - [x] **Phase 5** - Integration code generation: Python, TypeScript, Java with spec-backed validation
 - [x] **Phase 6** - Request validation and error diagnosis: deterministic schema-backed validation, curl parsing
 - [x] **Phase 7** - MCP server: 9 structured tools wired to application services
-- [ ] **Phase 8** - Next.js web UI: ingest, chat, explorer, validation panel, retrieval inspector
+- [x] **Phase 8** - Next.js web UI: ingest, chat, explorer, validation panel, retrieval inspector
 - [ ] **Phase 9** - Evaluation and hardening: Recall@K, MRR, citation precision, correct abstention rate
 - [ ] **Phase 10** - Portfolio release: README, demo video, eval results, MCP quickstart guide
 
