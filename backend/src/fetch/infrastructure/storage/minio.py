@@ -7,8 +7,8 @@ All operations are async. The client is created once and shared.
 import logging
 from typing import Any
 
-import aioboto3
-from botocore.exceptions import ClientError
+import aioboto3  # type: ignore[import-untyped]
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 
 from fetch.config import get_settings
 from fetch.domain.protocols import UploadResult
@@ -67,7 +67,7 @@ class MinioStorageProvider:
         async with self._client() as s3:
             try:
                 response = await s3.get_object(Bucket=self._bucket, Key=key)
-                return await response["Body"].read()
+                return await response["Body"].read()  # type: ignore[no-any-return]
             except ClientError as exc:
                 if exc.response["Error"]["Code"] in ("NoSuchKey", "404"):
                     raise KeyError(f"Object not found: {key}") from exc

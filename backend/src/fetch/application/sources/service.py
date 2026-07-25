@@ -31,6 +31,10 @@ from fetch.infrastructure.storage.minio import MinioStorageProvider
 
 logger = logging.getLogger(__name__)
 
+# Keeps strong references to background ingestion tasks so they are not
+# garbage-collected before completing. Tasks remove themselves on completion.
+_background_tasks: set[asyncio.Task[None]] = set()
+
 
 @dataclass
 class CreateSourceResult:
@@ -181,7 +185,7 @@ class CreateSourceService:
         # Start the ingestion pipeline as a background task
         from fetch.application.ingestion.service import run_ingestion
 
-        asyncio.create_task(
+        task = asyncio.create_task(
             run_ingestion(
                 job_id=job_id,
                 revision_id=revision_id,
@@ -190,6 +194,8 @@ class CreateSourceService:
             ),
             name=f"ingestion:{job_id}",
         )
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
 
         logger.info(
             "ingestion_queued",

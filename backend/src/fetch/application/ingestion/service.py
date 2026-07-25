@@ -19,7 +19,7 @@ from uuid import UUID
 
 import httpx
 
-from fetch.config import get_settings
+from fetch.config import Settings, get_settings
 from fetch.domain.entities import Chunk
 from fetch.domain.enums import IngestionStage, RevisionStatus
 from fetch.domain.errors import IngestionError
@@ -324,7 +324,7 @@ async def _run_pipeline(
 
     all_chunks_raw: list[Chunk] = op_chunks + schema_chunks + auth_chunks + error_chunks
     # Deduplicate by UUID — deterministic IDs mean identical content gets the same UUID.
-    seen_ids: set = set()
+    seen_ids: set[UUID] = set()
     all_chunks: list[Chunk] = []
     for c in all_chunks_raw:
         if c.id not in seen_ids:
@@ -427,7 +427,7 @@ async def _run_pipeline(
 async def _embed_in_batches(
     texts: list[str],
     profile: EmbeddingProfile,
-    settings: object,
+    settings: Settings,
 ) -> list[list[float]]:
     """Embed all texts in bounded batches using the configured provider.
 

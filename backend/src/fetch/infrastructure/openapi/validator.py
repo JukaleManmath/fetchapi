@@ -124,7 +124,7 @@ def load_yaml_safe(
             raise IngestionError(
                 "OpenAPI document root must be a mapping, not a scalar or list."
             )
-        return doc  # type: ignore[return-value]
+        return doc
 
     # YAML path: compose first to count aliases before construction
     try:
@@ -149,7 +149,7 @@ def load_yaml_safe(
             "OpenAPI document root must be a mapping, not a scalar or list."
         )
 
-    return doc  # type: ignore[return-value]
+    return doc
 
 
 def detect_openapi_version(doc: dict[str, Any]) -> str:
@@ -272,7 +272,7 @@ class RefResolver:
 
     def resolve(self) -> dict[str, Any]:
         """Return a fully resolved copy of the root document."""
-        return self._resolve_node(self._root, hops=0)  # type: ignore[return-value]
+        return self._resolve_node(self._root, hops=0)  # type: ignore[no-any-return]
 
     def _resolve_node(self, node: Any, hops: int) -> Any:
         if isinstance(node, dict):

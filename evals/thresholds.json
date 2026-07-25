@@ -1,0 +1,17 @@
+{
+  "retrieval": {
+    "recall_at_5": 0.70,
+    "recall_at_10": 0.80,
+    "mrr": 0.60
+  },
+  "answer": {
+    "citation_accuracy": 0.70,
+    "abstention_accuracy": 0.85,
+    "groundedness": 0.70
+  },
+  "validation": {
+    "finding_precision": 0.75,
+    "finding_recall": 0.70,
+    "is_valid_accuracy": 0.90
+  }
+}

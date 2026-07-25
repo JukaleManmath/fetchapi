@@ -1,0 +1,242 @@
+[
+  {
+    "id": "s001",
+    "question": "How do I create a charge?",
+    "expected_operation": "POST /v1/charges",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/charges"],
+    "should_abstain": false
+  },
+  {
+    "id": "s002",
+    "question": "How do I retrieve a customer?",
+    "expected_operation": "GET /v1/customers/{customer}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/v1/customers"],
+    "should_abstain": false
+  },
+  {
+    "id": "s003",
+    "question": "How do I create a payment intent?",
+    "expected_operation": "POST /v1/payment_intents",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/payment_intents"],
+    "should_abstain": false
+  },
+  {
+    "id": "s004",
+    "question": "How do I create a subscription?",
+    "expected_operation": "POST /v1/subscriptions",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/subscriptions"],
+    "should_abstain": false
+  },
+  {
+    "id": "s005",
+    "question": "How do I create a refund?",
+    "expected_operation": "POST /v1/refunds",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/refunds"],
+    "should_abstain": false
+  },
+  {
+    "id": "s006",
+    "question": "How do I list all invoices?",
+    "expected_operation": "GET /v1/invoices",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/v1/invoices"],
+    "should_abstain": false
+  },
+  {
+    "id": "s007",
+    "question": "How do I create a product?",
+    "expected_operation": "POST /v1/products",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/products"],
+    "should_abstain": false
+  },
+  {
+    "id": "s008",
+    "question": "How do I create a price?",
+    "expected_operation": "POST /v1/prices",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/v1/prices"],
+    "should_abstain": false
+  },
+  {
+    "id": "s009",
+    "question": "How do I retrieve my account details?",
+    "expected_operation": "GET /v1/account",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/v1/account"],
+    "should_abstain": false
+  },
+  {
+    "id": "s010",
+    "question": "How do I cancel a subscription?",
+    "expected_operation": "DELETE /v1/subscriptions/{subscription_exposed_id}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["DELETE", "/v1/subscriptions"],
+    "should_abstain": false
+  },
+  {
+    "id": "s011",
+    "question": "What parameters does POST /v1/payment_intents require?",
+    "expected_operation": "POST /v1/payment_intents",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["amount", "currency"],
+    "should_abstain": false
+  },
+  {
+    "id": "s012",
+    "question": "What parameters does POST /v1/charges accept?",
+    "expected_operation": "POST /v1/charges",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["amount", "currency", "source"],
+    "should_abstain": false
+  },
+  {
+    "id": "s013",
+    "question": "What query parameters does GET /v1/invoices support for filtering?",
+    "expected_operation": "GET /v1/invoices",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["customer", "status", "limit"],
+    "should_abstain": false
+  },
+  {
+    "id": "s014",
+    "question": "What is the customer parameter type for GET /v1/charges?",
+    "expected_operation": "GET /v1/charges",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["customer", "string"],
+    "should_abstain": false
+  },
+  {
+    "id": "s015",
+    "question": "What parameters does POST /v1/refunds take?",
+    "expected_operation": "POST /v1/refunds",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["charge", "amount"],
+    "should_abstain": false
+  },
+  {
+    "id": "s016",
+    "question": "What authentication does the Stripe API use?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["bearer", "api"],
+    "should_abstain": false
+  },
+  {
+    "id": "s017",
+    "question": "What auth scheme does Stripe use for API calls?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["BasicAuth", "bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "s018",
+    "question": "Does the Stripe API require authentication on all endpoints?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["bearer", "key"],
+    "should_abstain": false
+  },
+  {
+    "id": "s019",
+    "question": "What security scheme protects POST /v1/payment_intents?",
+    "expected_operation": "POST /v1/payment_intents",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "s020",
+    "question": "What auth header format does Stripe expect?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["Authorization", "Bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "s021",
+    "question": "What fields does the PaymentIntent object have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["amount", "currency", "status"],
+    "should_abstain": false
+  },
+  {
+    "id": "s022",
+    "question": "What does the Subscription schema look like?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["customer", "status", "items"],
+    "should_abstain": false
+  },
+  {
+    "id": "s023",
+    "question": "What fields does the Invoice schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["customer", "amount_due", "status"],
+    "should_abstain": false
+  },
+  {
+    "id": "s024",
+    "question": "What does the Refund schema look like?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["amount", "charge", "status"],
+    "should_abstain": false
+  },
+  {
+    "id": "s025",
+    "question": "What fields does the Customer schema include?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["email", "name", "id"],
+    "should_abstain": false
+  },
+  {
+    "id": "s026",
+    "question": "How do I deploy a Stripe instance on-premises?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "s027",
+    "question": "How do I configure a database connection for Stripe?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "s028",
+    "question": "What are the GraphQL endpoints for Stripe?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "s029",
+    "question": "How do I set up two-factor authentication for my Stripe account?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "s030",
+    "question": "How do I export all Stripe data to a CSV file?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  }
+]

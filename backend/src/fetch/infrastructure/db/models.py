@@ -184,7 +184,9 @@ class ApiServerModel(Base):
     url: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # e.g. {"environment": {"default": "production", "enum": ["production", "sandbox"]}}
-    variables: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    variables: Mapped[dict[str, object]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
 
     revision: Mapped["SourceRevisionModel"] = relationship(back_populates="servers")
 
@@ -216,7 +218,7 @@ class ApiOperationModel(Base):
     logical_key: Mapped[str] = mapped_column(Text, nullable=False)
     source_pointer: Mapped[str | None] = mapped_column(Text, nullable=True)
     # list of dicts: [{"bearerAuth": []}, {"apiKey": ["read"]}]
-    security_requirements: Mapped[list] = mapped_column(
+    security_requirements: Mapped[list[dict[str, list[str]]]] = mapped_column(
         JSONB, nullable=False, default=list
     )
 
@@ -279,7 +281,9 @@ class ApiRequestBodyModel(Base):
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # {"application/json": "{...schema...}", "multipart/form-data": "{...}"}
-    content_schemas: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    content_schemas: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
 
     operation: Mapped["ApiOperationModel"] = relationship(back_populates="request_body")
 
@@ -295,8 +299,10 @@ class ApiResponseModel(Base):
     )
     status_code: Mapped[str] = mapped_column(String(10), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    content_schemas: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    headers: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    content_schemas: Mapped[dict[str, str]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    headers: Mapped[dict[str, str]] = mapped_column(JSONB, nullable=False, default=dict)
 
     operation: Mapped["ApiOperationModel"] = relationship(back_populates="responses")
 
@@ -532,7 +538,9 @@ class IntegrationRunModel(Base):
     )
     language: Mapped[str] = mapped_column(String(20), nullable=False)
     generated_code: Mapped[str | None] = mapped_column(Text, nullable=True)
-    validation_report: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    validation_report: Mapped[dict[str, object] | None] = mapped_column(
+        JSONB, nullable=True
+    )
     support_status: Mapped[str] = mapped_column(String(50), nullable=False)
     warnings: Mapped[list[object]] = mapped_column(JSONB, nullable=False, default=list)
     prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)

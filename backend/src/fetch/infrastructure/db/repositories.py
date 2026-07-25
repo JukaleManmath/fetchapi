@@ -1423,7 +1423,9 @@ def _diagnostic_from_json(d: dict[str, object]) -> RequestDiagnostic:
             category=DiagnosticCategory(str(f["category"])),
             message=str(f["message"]),
             field=str(f["field"]) if f.get("field") else None,
-            canonical_value=str(f["canonical_value"]) if f.get("canonical_value") else None,
+            canonical_value=str(f["canonical_value"])
+            if f.get("canonical_value")
+            else None,
         )
         for f in cast(list[dict[str, object]], d.get("findings") or [])
     ]
@@ -1506,7 +1508,9 @@ class PgVersionDiffRepository:
         row = result.scalar_one_or_none()
         return _map_revision(row) if row else None
 
-    async def list_operations_for_revision(self, revision_id: UUID) -> list[ApiOperation]:
+    async def list_operations_for_revision(
+        self, revision_id: UUID
+    ) -> list[ApiOperation]:
         result = await self._session.execute(
             select(ApiOperationModel).where(
                 ApiOperationModel.revision_id == revision_id
