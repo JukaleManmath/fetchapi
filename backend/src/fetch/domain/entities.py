@@ -15,6 +15,7 @@ from fetch.domain.enums import (
     AuthSchemeType,
     ChunkRelationType,
     ChunkType,
+    GenerationLanguage,
     HttpMethod,
     IngestionStage,
     ParameterLocation,
@@ -369,6 +370,46 @@ class ValidationSummary:
     errors: list[str]
     warnings: list[str]
     corrected_example: str | None
+
+
+@dataclass
+class ValidationIssue:
+    severity: str  # "error" | "warning"
+    category: str  # "contract" | "syntax" | "security"
+    message: str
+    field: str | None = None
+
+
+@dataclass
+class ValidationReport:
+    contract_valid: bool
+    syntax_valid: bool
+    issues: list[ValidationIssue]
+    overall_valid: bool  # contract_valid AND syntax_valid
+
+
+@dataclass
+class IntegrationRun:
+    """A traceable record of one complete integration code generation run."""
+
+    id: UUID
+    workspace_id: UUID
+    source_id: UUID
+    revision_id: UUID
+    operation_id: UUID
+    language: GenerationLanguage
+    generated_code: str | None
+    validation_report: ValidationReport | None
+    support_status: SupportStatus
+    warnings: list[str]
+    prompt_version: str | None
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    context_assembly_ms: int | None
+    generation_ms: int | None
+    validation_ms: int | None
+    total_ms: int | None
+    created_at: datetime
 
 
 @dataclass

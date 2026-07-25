@@ -125,3 +125,11 @@ class HttpMethod(StrEnum):
     HEAD = "HEAD"
     OPTIONS = "OPTIONS"
     TRACE = "TRACE"
+
+
+class GenerationLanguage(StrEnum):
+    """Target programming language for integration code generation."""
+
+    PYTHON = "python"
+    TYPESCRIPT = "typescript"
+    JAVA = "java"

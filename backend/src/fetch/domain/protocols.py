@@ -18,6 +18,7 @@ from fetch.domain.entities import (
     Chunk,
     ChunkRelation,
     IngestionJob,
+    IntegrationRun,
     QueryRun,
     SourceRevision,
 )
@@ -360,5 +361,24 @@ class QueryRunRepository(Protocol):
         ...
 
     async def list_by_source(self, source_id: UUID, limit: int = 50) -> list[QueryRun]:
+        """Return the most recent runs for a source, newest first."""
+        ...
+
+
+@runtime_checkable
+class IntegrationRepository(Protocol):
+    """Persistence for IntegrationRun entities."""
+
+    async def save(self, run: IntegrationRun) -> None:
+        """Insert or update an integration run record."""
+        ...
+
+    async def get(self, run_id: UUID) -> IntegrationRun | None:
+        """Return the integration run or None if not found."""
+        ...
+
+    async def list_by_source(
+        self, source_id: UUID, limit: int = 50
+    ) -> list[IntegrationRun]:
         """Return the most recent runs for a source, newest first."""
         ...

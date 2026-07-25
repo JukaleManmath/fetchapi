@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from fetch.api.errors import register_error_handlers
+from fetch.api.v1.integrations import router as integrations_router
 from fetch.api.v1.operations import router as operations_router
 from fetch.api.v1.queries import router as queries_router
 from fetch.api.v1.sources import router as sources_router
@@ -57,6 +58,7 @@ register_error_handlers(app)
 app.include_router(sources_router)
 app.include_router(operations_router)
 app.include_router(queries_router)
+app.include_router(integrations_router)
 
 
 @app.get("/health/live", tags=["health"], include_in_schema=False)

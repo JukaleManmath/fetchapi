@@ -520,6 +520,39 @@ class ChunkRelationModel(Base):
 # ── Query runs ────────────────────────────────────────────────────────────────
 
 
+class IntegrationRunModel(Base):
+    __tablename__ = "integration_runs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    revision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    operation_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
+    language: Mapped[str] = mapped_column(String(20), nullable=False)
+    generated_code: Mapped[str | None] = mapped_column(Text, nullable=True)
+    validation_report: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    support_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    warnings: Mapped[list[object]] = mapped_column(JSONB, nullable=False, default=list)
+    prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    context_assembly_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    generation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_integration_runs_source", "source_id"),
+        Index("ix_integration_runs_workspace", "workspace_id"),
+        Index("ix_integration_runs_operation", "operation_id"),
+    )
+
+
 class QueryRunModel(Base):
     __tablename__ = "query_runs"
 
