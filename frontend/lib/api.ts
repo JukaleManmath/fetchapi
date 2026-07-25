@@ -98,26 +98,52 @@ export async function getJob(jobId: string): Promise<IngestionJob> {
 // Canonical entities
 // ---------------------------------------------------------------------------
 
-export function listOperations(
+// Backend returns plain arrays with *_id field names — normalise to match types.
+export async function listOperations(
   sourceId: string
 ): Promise<PaginatedResponse<Operation>> {
-  return request<PaginatedResponse<Operation>>(
-    `/v1/sources/${sourceId}/operations`
-  );
+  const raw = await request<Record<string, unknown>[]>(`/v1/sources/${sourceId}/operations`);
+  const items: Operation[] = raw.map((o) => ({
+    id: (o.operation_id ?? o.id) as string,
+    revision_id: o.revision_id as string ?? "",
+    operation_id: o.operation_id_str as string ?? "",
+    method: o.method as string,
+    path: o.path as string,
+    summary: (o.summary as string | null) ?? null,
+    description: (o.description as string | null) ?? null,
+    tags: (o.tags as string[]) ?? [],
+    deprecated: (o.deprecated as boolean) ?? false,
+  }));
+  return { items, total: items.length, limit: items.length, offset: 0 };
 }
 
 export function getOperation(operationId: string): Promise<Operation> {
   return request<Operation>(`/v1/operations/${operationId}`);
 }
 
-export function listSchemas(
+export async function listSchemas(
   sourceId: string
 ): Promise<PaginatedResponse<Schema>> {
-  return request<PaginatedResponse<Schema>>(`/v1/sources/${sourceId}/schemas`);
+  const raw = await request<Record<string, unknown>[]>(`/v1/sources/${sourceId}/schemas`);
+  const items: Schema[] = raw.map((s) => ({
+    id: (s.schema_id ?? s.id) as string,
+    revision_id: s.revision_id as string ?? "",
+    name: s.name as string,
+    description: (s.description as string | null) ?? null,
+    schema_type: (s.schema_type as string | null) ?? null,
+  }));
+  return { items, total: items.length, limit: items.length, offset: 0 };
 }
 
-export function listAuth(sourceId: string): Promise<AuthScheme[]> {
-  return request<AuthScheme[]>(`/v1/sources/${sourceId}/auth`);
+export async function listAuth(sourceId: string): Promise<AuthScheme[]> {
+  const raw = await request<Record<string, unknown>[]>(`/v1/sources/${sourceId}/auth`);
+  return raw.map((a) => ({
+    id: (a.auth_scheme_id ?? a.id) as string,
+    revision_id: a.revision_id as string ?? "",
+    name: a.name as string,
+    scheme_type: a.scheme_type as string,
+    description: (a.description as string | null) ?? null,
+  }));
 }
 
 // ---------------------------------------------------------------------------
