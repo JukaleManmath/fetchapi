@@ -28,29 +28,52 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 // Sources
 // ---------------------------------------------------------------------------
 
-export function listSources(): Promise<Source[]> {
-  return request<Source[]>("/v1/sources");
+// Backend returns `source_id`; normalise to `id` to match the Source type.
+function normaliseSource(raw: Record<string, unknown>): Source {
+  return {
+    id: raw.source_id as string,
+    name: raw.name as string,
+    created_at: raw.created_at as string,
+    active_revision_id: (raw.active_revision_id as string | null) ?? null,
+  };
 }
 
-export function getSource(id: string): Promise<Source> {
-  return request<Source>(`/v1/sources/${id}`);
+export async function listSources(): Promise<Source[]> {
+  const raw = await request<Record<string, unknown>[]>("/v1/sources");
+  return raw.map(normaliseSource);
+}
+
+export async function getSource(id: string): Promise<Source> {
+  const raw = await request<Record<string, unknown>>(`/v1/sources/${id}`);
+  return normaliseSource(raw);
 }
 
 // ---------------------------------------------------------------------------
 // Ingestion
 // ---------------------------------------------------------------------------
 
-export function ingestFromUrl(name: string, url: string): Promise<IngestionJob> {
-  return request<IngestionJob>("/v1/sources/openapi/url", {
+// Backend ingest response uses job_id/source_id; normalise to IngestionJob shape.
+function normaliseJob(raw: Record<string, unknown>): IngestionJob {
+  return {
+    id: (raw.job_id ?? raw.id) as string,
+    source_id: raw.source_id as string,
+    revision_id: raw.revision_id as string,
+    stage: (raw.stage ?? "QUEUED") as IngestionJob["stage"],
+    error_message: (raw.error_message as string | null) ?? null,
+    created_at: (raw.created_at as string) ?? "",
+    updated_at: (raw.updated_at as string) ?? "",
+  };
+}
+
+export async function ingestFromUrl(name: string, url: string): Promise<IngestionJob> {
+  const raw = await request<Record<string, unknown>>("/v1/sources/openapi/url", {
     method: "POST",
     body: JSON.stringify({ name, url }),
   });
+  return normaliseJob(raw);
 }
 
-export async function ingestFromFile(
-  name: string,
-  file: File
-): Promise<IngestionJob> {
+export async function ingestFromFile(name: string, file: File): Promise<IngestionJob> {
   const form = new FormData();
   form.append("name", name);
   form.append("file", file);
@@ -62,11 +85,13 @@ export async function ingestFromFile(
     const body = await res.text().catch(() => "");
     throw new Error(`${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
   }
-  return res.json() as Promise<IngestionJob>;
+  const raw = await res.json() as Record<string, unknown>;
+  return normaliseJob(raw);
 }
 
-export function getJob(jobId: string): Promise<IngestionJob> {
-  return request<IngestionJob>(`/v1/jobs/${jobId}`);
+export async function getJob(jobId: string): Promise<IngestionJob> {
+  const raw = await request<Record<string, unknown>>(`/v1/jobs/${jobId}`);
+  return normaliseJob(raw);
 }
 
 // ---------------------------------------------------------------------------
