@@ -21,9 +21,9 @@ export default async function SourceLayout({ children, params }: Props) {
     { label: "Operations", href: `/sources/${params.id}`, icon: <List size={13} /> },
     { label: "Schemas", href: `/sources/${params.id}/schemas`, icon: <BookOpen size={13} /> },
     { label: "Auth", href: `/sources/${params.id}/auth`, icon: <KeyRound size={13} /> },
-    { label: "Chat", href: `/sources/${params.id}/chat`, icon: <MessageSquare size={13} />, disabled: true, badge: "Phase 4" },
-    { label: "Validate", href: `/sources/${params.id}/validate`, icon: <ShieldCheck size={13} />, disabled: true, badge: "Phase 6" },
-    { label: "Generate", href: `/sources/${params.id}/generate`, icon: <Code2 size={13} />, disabled: true, badge: "Phase 5" },
+    { label: "Chat", href: `/sources/${params.id}/chat`, icon: <MessageSquare size={13} /> },
+    { label: "Validate", href: `/sources/${params.id}/validate`, icon: <ShieldCheck size={13} /> },
+    { label: "Generate", href: `/sources/${params.id}/generate`, icon: <Code2 size={13} /> },
   ];
 
   return (

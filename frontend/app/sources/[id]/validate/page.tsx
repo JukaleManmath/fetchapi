@@ -1,18 +1,68 @@
-import { ShieldCheck } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
+"use client";
 
-export const metadata = { title: "Validate" };
+import { useState } from "react";
+import { CurlInput } from "@/features/validate/curl-input";
+import { FindingsList } from "@/features/validate/findings-list";
+import { MatchedOperation } from "@/features/validate/matched-operation";
+import { CorrectedCurl } from "@/features/validate/corrected-curl";
+import { validateCurl } from "@/lib/api";
+import type { ValidationResult } from "@/lib/types";
 
-export default function ValidatePage() {
+interface Props { params: { id: string } }
+
+export default function ValidatePage({ params }: Props) {
+  const [result, setResult] = useState<ValidationResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleValidate(curl: string) {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const r = await validateCurl(params.id, curl);
+      setResult(r);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Validation failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center h-full py-24 gap-4 text-center">
-      <EmptyState
-        icon={<ShieldCheck size={32} />}
-        title="Request validation coming in Phase 6"
-        description="Paste a curl command or HTTP request and get deterministic, schema-backed diagnostics."
-        action={<Badge variant="warning">Phase 6 - Request Debugger</Badge>}
-      />
+    <div className="px-7 py-6 space-y-6 max-w-3xl">
+      <div className="space-y-1">
+        <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Validate</p>
+        <h2 className="text-sm font-semibold text-ink">Request debugger</h2>
+        <p className="text-xs text-ink-3">Paste a curl command to validate it against the spec. Get findings and a corrected example.</p>
+      </div>
+
+      <CurlInput onValidate={handleValidate} loading={loading} />
+
+      {error && <p className="text-xs text-red-500 font-mono">{error}</p>}
+
+      {result && (
+        <div className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">Matched operation</p>
+            <MatchedOperation operation={result.matched_operation} />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
+              Findings
+              {result.is_valid && (
+                <span className="ml-2 text-green-600">· valid</span>
+              )}
+            </p>
+            <FindingsList findings={result.findings} />
+          </div>
+
+          {result.corrected_curl && (
+            <CorrectedCurl curl={result.corrected_curl} />
+          )}
+        </div>
+      )}
     </div>
   );
 }

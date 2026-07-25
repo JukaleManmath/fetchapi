@@ -75,3 +75,60 @@ export interface PaginatedResponse<T> {
   limit: number;
   offset: number;
 }
+
+// ---------------------------------------------------------------------------
+// Queries (Chat / Q&A)
+// ---------------------------------------------------------------------------
+
+export interface Citation {
+  source_id: string;
+  chunk_id: string;
+  chunk_text: string;
+  entity_type: string;
+  score: number;
+}
+
+export interface ChatMessage {
+  id: string;           // local uuid, use crypto.randomUUID()
+  role: "user" | "assistant";
+  content: string;
+  citations?: Citation[];
+  support_status?: string;
+  loading?: boolean;    // true while streaming, false when done
+}
+
+// ---------------------------------------------------------------------------
+// Integration generation
+// ---------------------------------------------------------------------------
+
+export interface ValidationIssue {
+  severity: "error" | "warning" | "info";
+  message: string;
+  field?: string | null;
+}
+
+export interface GenerationResult {
+  code: string;
+  language: string;
+  operation_id: string;
+  contract_issues: ValidationIssue[];
+  syntax_issues: ValidationIssue[];
+}
+
+// ---------------------------------------------------------------------------
+// Request validation
+// ---------------------------------------------------------------------------
+
+export interface DiagnosticFinding {
+  category: string;
+  severity: "error" | "warning" | "info";
+  message: string;
+  field?: string | null;
+}
+
+export interface ValidationResult {
+  matched_operation: { method: string; path: string } | null;
+  findings: DiagnosticFinding[];
+  corrected_curl: string | null;
+  is_valid: boolean;
+}
