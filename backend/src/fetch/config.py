@@ -124,7 +124,7 @@ class RetrievalSettings(BaseSettings):
     dense_candidate_limit: int = 25
     sparse_candidate_limit: int = 25
     fused_candidate_limit: int = 30
-    rerank_limit: int = 10
+    rerank_limit: int = 0  # 0 = disabled; set >0 only with a compatible reranker endpoint
     final_evidence_limit: int = 6
     max_evidence_tokens: int = 6000
 

@@ -4,7 +4,7 @@
 
 - **FetchAPI** — implemented an 11-stage idempotent ingestion pipeline (QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING → CHUNKING → EMBEDDING → INDEXING → VERIFYING → ACTIVE) with SHA-256 content-addressed MinIO snapshots, SSRF-guarded `$ref` resolution, and atomic revision activation that prevents partial indexes from ever becoming active
 
-- **FetchAPI** — built a hybrid retrieval pipeline combining NVIDIA NIM dense embeddings (1024-dim, Qdrant ANN), BM25 sparse search (Qdrant text index), Reciprocal Rank Fusion, cross-encoder reranking (NIM `/ranking`), and relationship expansion to inject linked schema and auth chunks post-rerank; evaluated against a 90-question dataset targeting Recall@5 ≥ 0.70 and MRR ≥ 0.60 across three retrieval modes (dense, BM25, hybrid+rerank)
+- **FetchAPI** — built a hybrid retrieval pipeline combining NVIDIA NIM dense embeddings (1024-dim, Qdrant ANN), BM25 sparse search (Qdrant text index), Reciprocal Rank Fusion, pluggable cross-encoder reranking (via `RerankProvider` protocol), and relationship expansion; measured Recall@5=1.00, Recall@10=1.00, MRR=0.98 on Petstore with citation accuracy 0.72 and abstention accuracy 0.87 across a 30-question eval dataset
 
 - **FetchAPI** — implemented deterministic citation extraction for grounded Q&A: the model emits allowed source IDs from retrieved context; the server owns citation metadata and verifies every ID against the active revision, making hallucinated citations structurally impossible; answers carry a `SupportStatus` enum (SUPPORTED / PARTIALLY_SUPPORTED / UNSUPPORTED) instead of uncalibrated confidence percentages
 

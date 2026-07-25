@@ -51,6 +51,9 @@ class RetrievalReranker:
         if not candidates:
             return []
 
+        if config.top_n == 0:
+            return candidates
+
         rerank_candidates = [
             RerankCandidate(index=i, text=hit.payload.get("text", ""))
             for i, hit in enumerate(candidates)

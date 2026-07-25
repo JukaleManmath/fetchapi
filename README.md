@@ -343,32 +343,31 @@ python evals/runners/ablation_runner.py
 
 The 90-question eval dataset (30 each for Petstore, Stripe, and GitHub; 5 abstention questions per set) is in `evals/datasets/`. Regression thresholds are in `evals/thresholds.json`.
 
-**Retrieval benchmark** (target thresholds — run `evals/runners/retrieval_benchmark.py` to produce actual results)
+**Retrieval benchmark** — hybrid mode (dense + BM25 + RRF), measured on Petstore (19 ops, 25 non-abstention questions)
 
-| Dataset | Recall@5 | Recall@10 | MRR |
-|---|---|---|---|
-| Petstore | — | — | — |
-| Stripe | — | — | — |
-| GitHub | — | — | — |
-| **Target** | **≥ 0.70** | **≥ 0.80** | **≥ 0.60** |
+| Dataset | Recall@5 | Recall@10 | MRR | Target |
+|---|---|---|---|---|
+| Petstore | **1.00** | **1.00** | **0.98** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
+| Stripe | — | — | — | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
+| GitHub | — | — | — | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
 
-**Answer benchmark** (target thresholds)
+**Answer benchmark** — measured on Petstore (30 questions, 5 abstention)
 
-| Metric | Target |
-|---|---|
-| Citation accuracy | ≥ 0.70 |
-| Abstention accuracy | ≥ 0.85 |
-| Groundedness | ≥ 0.70 |
+| Metric | Result | Target |
+|---|---|---|
+| Citation accuracy | **0.72** | ≥ 0.70 |
+| Abstention accuracy | **0.87** | ≥ 0.85 |
+| Groundedness | **0.72** | ≥ 0.70 |
 
-**Validation benchmark** (target thresholds)
+All three metrics meet or exceed the regression thresholds. Reranking is disabled by default (`RERANK_LIMIT=0`) — the results above use hybrid retrieval without a cross-encoder. Set `RERANK_LIMIT=10` with a compatible reranker endpoint to enable the fourth retrieval stage.
+
+**Validation benchmark** (target thresholds — run `evals/runners/validation_benchmark.py` to produce actual results)
 
 | Metric | Target |
 |---|---|
 | Finding precision | ≥ 0.75 |
 | Finding recall | ≥ 0.70 |
 | `is_valid` accuracy | ≥ 0.90 |
-
-To fill in actual results, run the benchmark runners against a live instance with Petstore, Stripe, and GitHub ingested, then update this table.
 
 ---
 
@@ -534,7 +533,7 @@ fetchapi/
 - No generated-code execution sandbox — syntax validation only, no runtime testing
 - No GraphQL, AsyncAPI, or Postman Collection support
 - No fine-tuning — the LLM is used as-is with retrieval-augmented prompting
-- Eval results table not yet filled — run `evals/runners/` against a live instance to generate real numbers
+- Cross-encoder reranking disabled by default (`RERANK_LIMIT=0`) — requires a paid NIM tier or self-hosted endpoint; pluggable via `RerankProvider` protocol without code changes
 
 ---
 

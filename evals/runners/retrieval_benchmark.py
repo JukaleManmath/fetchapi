@@ -45,12 +45,13 @@ from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
 from fetch.infrastructure.qdrant.repository import QdrantRepository
 
 
-def _build_retrieval_config(mode: str, settings: Any) -> RetrievalConfig:
+def _build_retrieval_config(mode: str, settings: Any, embedding_profile_version: str = "v1") -> RetrievalConfig:
     dense_config = DenseRetrievalConfig(
         model_id=settings.embeddings.model_id,
         top_k=settings.retrieval.dense_candidate_limit,
+        embedding_profile_version=embedding_profile_version,
     )
-    bm25_config = BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit)
+    bm25_config = BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit, embedding_profile_version=embedding_profile_version)
     fusion_config = FusionConfig(top_k=settings.retrieval.fused_candidate_limit)
     rerank_config = RerankConfig(
         model_id=settings.reranker.model_id,
@@ -59,7 +60,7 @@ def _build_retrieval_config(mode: str, settings: Any) -> RetrievalConfig:
     expansion_config = ExpansionConfig()
 
     if mode == "dense":
-        bm25_config = BM25RetrievalConfig(top_k=0)
+        bm25_config = BM25RetrievalConfig(top_k=0, embedding_profile_version=embedding_profile_version)
         rerank_config = RerankConfig(model_id=settings.reranker.model_id, top_n=0)
     elif mode == "hybrid":
         rerank_config = RerankConfig(model_id=settings.reranker.model_id, top_n=0)
@@ -210,9 +211,11 @@ async def main() -> None:
     settings = get_settings()
     init_db()
 
-    # Resolve workspace_id and revision_id
+    # Resolve workspace_id, revision_id, and actual embedding_profile_version UUID
     async with get_session() as session:
-        from fetch.infrastructure.db.repositories import PgSourceRepository, PgRevisionRepository
+        from sqlalchemy import text
+
+        from fetch.infrastructure.db.repositories import PgRevisionRepository, PgSourceRepository
 
         source_repo = PgSourceRepository(session)
         rev_repo = PgRevisionRepository(session)
@@ -230,7 +233,16 @@ async def main() -> None:
         workspace_id = source.workspace_id
         revision_id = revision.id
 
-    retrieval_config = _build_retrieval_config(args.mode, settings)
+        # The Qdrant payload stores embedding_profile_id (UUID), not the version string.
+        # Look up the actual profile UUID that matches the current embeddings model.
+        row = await session.execute(
+            text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+            {"model": settings.embeddings.model_id},
+        )
+        profile_row = row.fetchone()
+        embedding_profile_version = str(profile_row[0]) if profile_row else "v1"
+
+    retrieval_config = _build_retrieval_config(args.mode, settings, embedding_profile_version)
 
     output = await run_eval(
         dataset=dataset,

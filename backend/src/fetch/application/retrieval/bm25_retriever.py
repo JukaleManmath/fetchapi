@@ -52,6 +52,9 @@ class BM25Retriever:
         Delegates entirely to QdrantRepository.search_bm25; all tenant
         isolation is enforced there.
         """
+        if config.top_k == 0:
+            return []
+
         hits = await self._qdrant.search_bm25(
             query_text=query_text,
             revision_id=revision_id,

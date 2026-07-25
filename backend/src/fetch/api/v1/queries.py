@@ -78,6 +78,8 @@ async def stream_query(
 
     # Resolve source and active revision before streaming
     async with get_session() as session:
+        from sqlalchemy import text as sa_text
+
         source_repo = PgSourceRepository(session)
         rev_repo = PgRevisionRepository(session)
 
@@ -98,6 +100,14 @@ async def stream_query(
                 },
             )
 
+        # Qdrant payloads store embedding_profile_id (UUID), not the version string.
+        row = await session.execute(
+            sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+            {"model": settings.embeddings.model_id},
+        )
+        profile_row = row.fetchone()
+        embedding_profile_version = str(profile_row[0]) if profile_row else "v1"
+
     source_id: UUID = body.source_id
     revision_id: UUID = revision.id
 
@@ -108,8 +118,9 @@ async def stream_query(
         dense=DenseRetrievalConfig(
             model_id=settings.embeddings.model_id,
             top_k=settings.retrieval.dense_candidate_limit,
+            embedding_profile_version=embedding_profile_version,
         ),
-        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit),
+        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit, embedding_profile_version=embedding_profile_version),
         fusion=FusionConfig(top_k=settings.retrieval.fused_candidate_limit),
         rerank=RerankConfig(
             model_id=settings.reranker.model_id,

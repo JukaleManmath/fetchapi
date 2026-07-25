@@ -113,6 +113,14 @@ async def main() -> None:
         workspace_id = source.workspace_id
         revision_id = revision.id
 
+        from sqlalchemy import text as sa_text
+        row = await session.execute(
+            sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+            {"model": settings.embeddings.model_id},
+        )
+        profile_row = row.fetchone()
+        embedding_profile_version = str(profile_row[0]) if profile_row else "v1"
+
     nim = NvidiaNimProvider(
         api_key=settings.llm.api_key.get_secret_value(),
         base_url=settings.llm.base_url,
@@ -124,8 +132,9 @@ async def main() -> None:
         dense=DenseRetrievalConfig(
             model_id=settings.embeddings.model_id,
             top_k=settings.retrieval.dense_candidate_limit,
+            embedding_profile_version=embedding_profile_version,
         ),
-        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit),
+        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit, embedding_profile_version=embedding_profile_version),
         fusion=FusionConfig(top_k=settings.retrieval.fused_candidate_limit),
         rerank=RerankConfig(
             model_id=settings.reranker.model_id,

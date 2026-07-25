@@ -58,6 +58,14 @@ async def main() -> None:
         workspace_id = source.workspace_id
         revision_id = revision.id
 
+        from sqlalchemy import text as sa_text
+        row = await session.execute(
+            sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+            {"model": settings.embeddings.model_id},
+        )
+        profile_row = row.fetchone()
+        embedding_profile_version = str(profile_row[0]) if profile_row else "v1"
+
     modes = [
         ("dense", "dense"),
         ("hybrid", "hybrid"),
@@ -70,7 +78,7 @@ async def main() -> None:
     print("-" * 48)
 
     for label, mode in modes:
-        retrieval_config = _build_retrieval_config(mode, settings)
+        retrieval_config = _build_retrieval_config(mode, settings, embedding_profile_version)
         output = await run_eval(
             dataset=dataset,
             source_id=source_id,
