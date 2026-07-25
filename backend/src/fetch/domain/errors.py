@@ -171,3 +171,7 @@ class EndpointNotFoundError(FetchError):
 class NoMatchForStatusCodeError(FetchError):
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class IncompatibleSourceError(FetchError):
+    """Both revisions must belong to the same source."""

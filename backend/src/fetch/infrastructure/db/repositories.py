@@ -1490,6 +1490,43 @@ def _map_diagnostic_run(row: RequestDiagnosticRunModel) -> RequestDiagnosticRun:
     )
 
 
+class PgVersionDiffRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def find_revision_by_source_and_label(
+        self, source_id: UUID, version_label: str
+    ) -> SourceRevision | None:
+        result = await self._session.execute(
+            select(SourceRevisionModel).where(
+                SourceRevisionModel.source_id == source_id,
+                SourceRevisionModel.api_version == version_label,
+            )
+        )
+        row = result.scalar_one_or_none()
+        return _map_revision(row) if row else None
+
+    async def list_operations_for_revision(self, revision_id: UUID) -> list[ApiOperation]:
+        result = await self._session.execute(
+            select(ApiOperationModel).where(
+                ApiOperationModel.revision_id == revision_id
+            )
+        )
+        return [_map_operation(r) for r in result.scalars().all()]
+
+    async def list_schemas_for_revision(self, revision_id: UUID) -> list[ApiSchema]:
+        result = await self._session.execute(
+            select(ApiSchemaModel).where(ApiSchemaModel.revision_id == revision_id)
+        )
+        return [_map_schema(r) for r in result.scalars().all()]
+
+    async def list_auth_for_revision(self, revision_id: UUID) -> list[AuthScheme]:
+        result = await self._session.execute(
+            select(AuthSchemeModel).where(AuthSchemeModel.revision_id == revision_id)
+        )
+        return [_map_auth(r) for r in result.scalars().all()]
+
+
 class PgDiagnosticRunRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
