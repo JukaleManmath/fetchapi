@@ -20,6 +20,7 @@ from fetch.domain.entities import (
     IngestionJob,
     IntegrationRun,
     QueryRun,
+    RequestDiagnosticRun,
     SourceRevision,
 )
 
@@ -382,3 +383,11 @@ class IntegrationRepository(Protocol):
     ) -> list[IntegrationRun]:
         """Return the most recent runs for a source, newest first."""
         ...
+
+
+class DiagnosticRunRepository(Protocol):
+    async def save(self, run: RequestDiagnosticRun) -> None: ...
+    async def get(self, run_id: UUID) -> RequestDiagnosticRun | None: ...
+    async def list_by_source(
+        self, source_id: UUID, limit: int = 50
+    ) -> list[RequestDiagnosticRun]: ...

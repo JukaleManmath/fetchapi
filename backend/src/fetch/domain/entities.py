@@ -15,9 +15,12 @@ from fetch.domain.enums import (
     AuthSchemeType,
     ChunkRelationType,
     ChunkType,
+    DiagnosticCategory,
+    DiagnosticInputType,
     GenerationLanguage,
     HttpMethod,
     IngestionStage,
+    MatchConfidence,
     ParameterLocation,
     QueryWorkflow,
     RevisionStatus,
@@ -444,3 +447,80 @@ class QueryRun:
     exact_match_found: bool = False
     prompt_version: str | None = None
     intent_classification: str | None = None
+
+
+# ── Request validation ────────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class ParsedRequest:
+    method: str
+    url: str
+    headers: dict[str, str]  # keys lowercased
+    body_raw: str | None
+    body_json: dict[str, object] | None
+    content_type: str | None
+    auth_header: str | None  # NEVER log or persist this value
+    query_params: dict[str, str]
+    is_url_encoded_body: bool
+
+
+@dataclass(frozen=True)
+class EndpointMatch:
+    operation: "ApiOperation | None"
+    path_params: dict[str, str]
+    match_confidence: MatchConfidence
+
+
+@dataclass(frozen=True)
+class DiagnosticFinding:
+    severity: str  # "error" | "warning"
+    category: DiagnosticCategory
+    message: str
+    field: str | None = None
+    canonical_value: str | None = None
+
+
+@dataclass(frozen=True)
+class ErrorStatusMatch:
+    status_code: str
+    matched_definitions: list["ErrorDefinition"]
+    is_documented: bool
+
+
+@dataclass(frozen=True)
+class RequestDiagnostic:
+    parsed_request: ParsedRequest
+    endpoint_match: "EndpointMatch | None"
+    findings: list[DiagnosticFinding]
+    error_status_match: "ErrorStatusMatch | None"
+    corrected_curl: str | None
+    is_valid: bool
+
+
+@dataclass
+class RequestDiagnosticRun:
+    id: UUID
+    workspace_id: UUID
+    source_id: UUID
+    revision_id: UUID
+    operation_id: UUID | None
+    input_type: DiagnosticInputType
+    raw_input: str  # auth header values must be redacted before storing
+    parsed_method: str | None
+    parsed_url: str | None
+    received_status_code: str | None
+    diagnostic: "RequestDiagnostic | None"
+    explanation: str | None
+    corrected_curl: str | None
+    is_valid: bool
+    support_status: SupportStatus
+    prompt_version: str | None
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    parse_ms: int | None
+    match_ms: int | None
+    validate_ms: int | None
+    explanation_ms: int | None
+    total_ms: int | None
+    created_at: datetime

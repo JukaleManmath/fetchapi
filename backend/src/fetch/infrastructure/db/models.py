@@ -553,6 +553,45 @@ class IntegrationRunModel(Base):
     )
 
 
+class RequestDiagnosticRunModel(Base):
+    __tablename__ = "request_diagnostic_runs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    workspace_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    source_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    revision_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    operation_id: Mapped[UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=True
+    )
+    input_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    raw_input: Mapped[str] = mapped_column(Text, nullable=False)
+    parsed_method: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    parsed_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    received_status_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    diagnostic: Mapped[dict[str, object] | None] = mapped_column(JSONB, nullable=True)
+    explanation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    corrected_curl: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_valid: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    support_status: Mapped[str] = mapped_column(String(50), nullable=False)
+    prompt_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    prompt_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    completion_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    parse_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    match_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    validate_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    explanation_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+    __table_args__ = (
+        Index("ix_diagnostic_runs_source", "source_id"),
+        Index("ix_diagnostic_runs_workspace", "workspace_id"),
+        Index("ix_diagnostic_runs_operation", "operation_id"),
+    )
+
+
 class QueryRunModel(Base):
     __tablename__ = "query_runs"
 

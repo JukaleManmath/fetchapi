@@ -133,3 +133,22 @@ class GenerationLanguage(StrEnum):
     PYTHON = "python"
     TYPESCRIPT = "typescript"
     JAVA = "java"
+
+
+class DiagnosticCategory(StrEnum):
+    HEADER = "header"
+    PARAMETER = "parameter"
+    BODY = "body"
+    AUTH = "auth"
+    ENDPOINT = "endpoint"
+
+
+class DiagnosticInputType(StrEnum):
+    CURL = "curl"
+    REQUEST = "request"
+
+
+class MatchConfidence(StrEnum):
+    EXACT = "exact"
+    PATH_TEMPLATE = "path_template"
+    NO_MATCH = "no_match"

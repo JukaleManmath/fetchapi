@@ -1,0 +1,94 @@
+[
+  {
+    "id": "v001",
+    "curl_command": "curl -X POST https://api.example.com/v1/items -H 'Content-Type: application/json' -d '{\"name\":\"test\"}'",
+    "expected_findings": [{"category": "auth", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v002",
+    "curl_command": "curl -X DELETE https://api.example.com/v1/nonexistent-endpoint",
+    "expected_findings": [{"category": "endpoint", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v003",
+    "curl_command": "curl -X POST https://api.example.com/v1/users -H 'Authorization: Bearer tok' -H 'Content-Type: application/json' -d '{}'",
+    "expected_findings": [{"category": "body", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v004",
+    "curl_command": "curl -X POST https://api.example.com/v1/orders -H 'Authorization: Bearer tok' -H 'Content-Type: application/json' -d '{\"quantity\":\"five\"}'",
+    "expected_findings": [{"category": "body", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v005",
+    "curl_command": "curl https://api.example.com/v1/customers/cus_abc123 -H 'Authorization: Bearer tok'",
+    "expected_findings": [],
+    "expected_is_valid": true
+  },
+  {
+    "id": "v006",
+    "curl_command": "curl -X POST https://api.example.com/v1/items -H 'Authorization: Bearer tok' -H 'Content-Type: text/plain' -d 'hello'",
+    "expected_findings": [{"category": "header", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v007",
+    "curl_command": "curl -X POST https://api.example.com/v1/items -H 'Authorization: Bearer tok' -H 'Content-Type: application/json' -d '{\"name\":\"test\",\"undocumented_field\":\"extra\"}'",
+    "expected_findings": [{"category": "body", "severity": "warning"}],
+    "expected_is_valid": true
+  },
+  {
+    "id": "v008",
+    "curl_command": "curl https://api.example.com/v1/items -H 'Authorization: Bearer tok'",
+    "expected_findings": [{"category": "parameter", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v009",
+    "curl_command": "curl -X POST https://api.example.com/v1/orders -H 'Authorization: Bearer tok' -H 'Content-Type: application/json' -d '{\"status\":\"unknown_status\"}'",
+    "expected_findings": [{"category": "body", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v010",
+    "curl_command": "curl -X GET https://api.example.com/v1/items -H 'Authorization: Bearer tok'",
+    "expected_findings": [],
+    "expected_is_valid": true
+  },
+  {
+    "id": "v011",
+    "curl_command": "curl -X POST https://api.example.com/v1/payments -H 'Authorization: Bearer tok' -H 'Content-Type: application/json' -d '{}'",
+    "received_status_code": "401",
+    "expected_findings": [{"category": "body", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v012",
+    "curl_command": "curl https://api.example.com/v1/items -H 'Authorization: Bearer tok'",
+    "received_status_code": "999",
+    "expected_findings": [],
+    "expected_is_valid": true
+  },
+  {
+    "id": "v013",
+    "curl_command": "curl -X POST https://api.example.com/v1/items -H 'Authorization: Bearer tok' -H 'Content-Type: application/x-www-form-urlencoded' -d 'name=test'",
+    "expected_findings": [{"category": "body", "severity": "error"}],
+    "expected_is_valid": false
+  },
+  {
+    "id": "v014",
+    "curl_command": "curl https://api.example.com/v1/items?old_param=value -H 'Authorization: Bearer tok'",
+    "expected_findings": [{"category": "parameter", "severity": "warning"}],
+    "expected_is_valid": true
+  },
+  {
+    "id": "v015",
+    "curl_command": "curl -X POST \\\n  https://api.example.com/v1/items \\\n  -H 'Authorization: Bearer tok' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"test\"}'",
+    "expected_findings": [],
+    "expected_is_valid": true
+  }
+]
