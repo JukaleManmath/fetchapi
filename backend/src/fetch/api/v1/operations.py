@@ -41,7 +41,7 @@ class OperationSummary(BaseModel):
 
 class OperationDetail(OperationSummary):
     description: str | None
-    security_requirements: list
+    security_requirements: list[object]
     source_pointer: str | None
 
 
@@ -63,7 +63,7 @@ class SchemaSummary(BaseModel):
 
 
 class SchemaDetail(SchemaSummary):
-    schema_json: str
+    schema_json: str  # type: ignore[assignment]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

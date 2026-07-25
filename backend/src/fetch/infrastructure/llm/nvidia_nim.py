@@ -75,7 +75,7 @@ class NvidiaNimProvider:
     ) -> AsyncIterator[StreamChunk]:
         """Stream text chunks from the LLM. Yields a final chunk with usage."""
         try:
-            stream = await self._llm_client.chat.completions.create(
+            stream = await self._llm_client.chat.completions.create(  # type: ignore[call-overload]
                 model=config.model_id,
                 messages=[{"role": m.role, "content": m.content} for m in messages],
                 max_tokens=config.max_tokens,
@@ -121,12 +121,12 @@ class NvidiaNimProvider:
         try:
             response = await self._llm_client.chat.completions.create(
                 model=config.model_id,
-                messages=[{"role": m.role, "content": m.content} for m in messages],
+                messages=[{"role": m.role, "content": m.content} for m in messages],  # type: ignore[misc]
                 max_tokens=config.max_tokens,
                 temperature=config.temperature,
                 stream=False,
             )
-            return response.choices[0].message.content or ""
+            return response.choices[0].message.content or ""  # type: ignore[union-attr]
         except openai.OpenAIError as exc:
             raise map_openai_error(exc) from exc
 

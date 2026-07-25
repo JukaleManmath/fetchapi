@@ -259,7 +259,7 @@ class BodyValidator:
         parsed: ParsedRequest,
         operation: ApiOperation,
     ) -> list[DiagnosticFinding]:
-        import jsonschema
+        import jsonschema  # type: ignore[import-untyped]
 
         findings: list[DiagnosticFinding] = []
         request_body = getattr(operation, "request_body", None)

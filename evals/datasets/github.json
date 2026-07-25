@@ -1,0 +1,242 @@
+[
+  {
+    "id": "g001",
+    "question": "How do I get a repository?",
+    "expected_operation": "GET /repos/{owner}/{repo}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/repos/{owner}/{repo}"],
+    "should_abstain": false
+  },
+  {
+    "id": "g002",
+    "question": "How do I list issues for a repository?",
+    "expected_operation": "GET /repos/{owner}/{repo}/issues",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/repos", "issues"],
+    "should_abstain": false
+  },
+  {
+    "id": "g003",
+    "question": "How do I create a pull request?",
+    "expected_operation": "POST /repos/{owner}/{repo}/pulls",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "pulls"],
+    "should_abstain": false
+  },
+  {
+    "id": "g004",
+    "question": "How do I get a user's profile?",
+    "expected_operation": "GET /users/{username}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/users/{username}"],
+    "should_abstain": false
+  },
+  {
+    "id": "g005",
+    "question": "How do I list organization members?",
+    "expected_operation": "GET /orgs/{org}/members",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/orgs", "members"],
+    "should_abstain": false
+  },
+  {
+    "id": "g006",
+    "question": "How do I search for repositories?",
+    "expected_operation": "GET /search/repositories",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/search/repositories"],
+    "should_abstain": false
+  },
+  {
+    "id": "g007",
+    "question": "How do I create a gist?",
+    "expected_operation": "POST /gists",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/gists"],
+    "should_abstain": false
+  },
+  {
+    "id": "g008",
+    "question": "How do I list admin hooks?",
+    "expected_operation": "GET /admin/hooks",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/admin/hooks"],
+    "should_abstain": false
+  },
+  {
+    "id": "g009",
+    "question": "How do I create an issue in a repository?",
+    "expected_operation": "POST /repos/{owner}/{repo}/issues",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "issues"],
+    "should_abstain": false
+  },
+  {
+    "id": "g010",
+    "question": "How do I merge a pull request?",
+    "expected_operation": "PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["PUT", "merge"],
+    "should_abstain": false
+  },
+  {
+    "id": "g011",
+    "question": "What parameters does GET /repos/{owner}/{repo}/issues accept?",
+    "expected_operation": "GET /repos/{owner}/{repo}/issues",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["state", "labels", "sort"],
+    "should_abstain": false
+  },
+  {
+    "id": "g012",
+    "question": "What parameters does GET /search/repositories take?",
+    "expected_operation": "GET /search/repositories",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["q", "sort", "order"],
+    "should_abstain": false
+  },
+  {
+    "id": "g013",
+    "question": "What is the type of the pull_number path parameter?",
+    "expected_operation": "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["pull_number", "integer"],
+    "should_abstain": false
+  },
+  {
+    "id": "g014",
+    "question": "What query parameters does GET /users/{username}/repos support?",
+    "expected_operation": "GET /users/{username}/repos",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["type", "sort", "direction"],
+    "should_abstain": false
+  },
+  {
+    "id": "g015",
+    "question": "What parameters does POST /repos/{owner}/{repo}/issues require?",
+    "expected_operation": "POST /repos/{owner}/{repo}/issues",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["title"],
+    "should_abstain": false
+  },
+  {
+    "id": "g016",
+    "question": "What auth does the GitHub API use?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["bearer", "token"],
+    "should_abstain": false
+  },
+  {
+    "id": "g017",
+    "question": "What authentication scheme does GitHub GHES require?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "g018",
+    "question": "Does the GitHub API support OAuth?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["oauth", "token"],
+    "should_abstain": false
+  },
+  {
+    "id": "g019",
+    "question": "What security scheme is used for POST /repos/{owner}/{repo}/pulls?",
+    "expected_operation": "POST /repos/{owner}/{repo}/pulls",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "g020",
+    "question": "What auth header format does the GitHub API expect?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["Authorization", "Bearer"],
+    "should_abstain": false
+  },
+  {
+    "id": "g021",
+    "question": "What fields does the repository schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["id", "name", "owner", "full_name"],
+    "should_abstain": false
+  },
+  {
+    "id": "g022",
+    "question": "What does the issue schema look like?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["title", "body", "state", "number"],
+    "should_abstain": false
+  },
+  {
+    "id": "g023",
+    "question": "What fields does the pull request schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["title", "head", "base", "state"],
+    "should_abstain": false
+  },
+  {
+    "id": "g024",
+    "question": "What does the user schema contain?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["login", "id", "type"],
+    "should_abstain": false
+  },
+  {
+    "id": "g025",
+    "question": "What fields does the gist schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["id", "files", "public"],
+    "should_abstain": false
+  },
+  {
+    "id": "g026",
+    "question": "How do I deploy a GitHub runner on a private cloud?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "g027",
+    "question": "How do I reset my GitHub account password via the API?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "g028",
+    "question": "What is the SLA uptime guarantee for GitHub GHES?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "g029",
+    "question": "How do I configure GitHub GHES load balancing?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "g030",
+    "question": "How do I connect GitHub to a Slack workspace?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  }
+]

@@ -1,0 +1,242 @@
+[
+  {
+    "id": "p001",
+    "question": "How do I add a new pet to the store?",
+    "expected_operation": "POST /pet",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/pet"],
+    "should_abstain": false
+  },
+  {
+    "id": "p002",
+    "question": "How do I find pets by status?",
+    "expected_operation": "GET /pet/findByStatus",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/pet/findByStatus", "status"],
+    "should_abstain": false
+  },
+  {
+    "id": "p003",
+    "question": "How do I delete a pet?",
+    "expected_operation": "DELETE /pet/{petId}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["DELETE", "petId"],
+    "should_abstain": false
+  },
+  {
+    "id": "p004",
+    "question": "How do I upload a pet image?",
+    "expected_operation": "POST /pet/{petId}/uploadImage",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "uploadImage"],
+    "should_abstain": false
+  },
+  {
+    "id": "p005",
+    "question": "How do I place an order for a pet?",
+    "expected_operation": "POST /store/order",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/store/order"],
+    "should_abstain": false
+  },
+  {
+    "id": "p006",
+    "question": "How do I get store inventory?",
+    "expected_operation": "GET /store/inventory",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/store/inventory"],
+    "should_abstain": false
+  },
+  {
+    "id": "p007",
+    "question": "How do I create a user account?",
+    "expected_operation": "POST /user",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["POST", "/user"],
+    "should_abstain": false
+  },
+  {
+    "id": "p008",
+    "question": "How do I log in to the petstore?",
+    "expected_operation": "GET /user/login",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/user/login"],
+    "should_abstain": false
+  },
+  {
+    "id": "p009",
+    "question": "How do I log out of the petstore?",
+    "expected_operation": "GET /user/logout",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["GET", "/user/logout"],
+    "should_abstain": false
+  },
+  {
+    "id": "p010",
+    "question": "How do I update an existing pet?",
+    "expected_operation": "PUT /pet",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["PUT", "/pet"],
+    "should_abstain": false
+  },
+  {
+    "id": "p011",
+    "question": "What parameters does GET /pet/findByStatus take?",
+    "expected_operation": "GET /pet/findByStatus",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["status", "available", "pending", "sold"],
+    "should_abstain": false
+  },
+  {
+    "id": "p012",
+    "question": "What type is the petId path parameter?",
+    "expected_operation": "GET /pet/{petId}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["petId", "integer"],
+    "should_abstain": false
+  },
+  {
+    "id": "p013",
+    "question": "What parameters does GET /pet/findByTags take?",
+    "expected_operation": "GET /pet/findByTags",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["tags", "array"],
+    "should_abstain": false
+  },
+  {
+    "id": "p014",
+    "question": "What parameters does GET /user/login require?",
+    "expected_operation": "GET /user/login",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["username", "password"],
+    "should_abstain": false
+  },
+  {
+    "id": "p015",
+    "question": "What parameters does GET /store/order/{orderId} accept?",
+    "expected_operation": "GET /store/order/{orderId}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["orderId", "integer"],
+    "should_abstain": false
+  },
+  {
+    "id": "p016",
+    "question": "What authentication does POST /pet require?",
+    "expected_operation": "POST /pet",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["petstore_auth", "write:pets"],
+    "should_abstain": false
+  },
+  {
+    "id": "p017",
+    "question": "What scopes does petstore_auth have?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["write:pets", "read:pets"],
+    "should_abstain": false
+  },
+  {
+    "id": "p018",
+    "question": "What auth does DELETE /pet/{petId} require?",
+    "expected_operation": "DELETE /pet/{petId}",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["petstore_auth", "write:pets"],
+    "should_abstain": false
+  },
+  {
+    "id": "p019",
+    "question": "Does GET /store/inventory require authentication?",
+    "expected_operation": "GET /store/inventory",
+    "expected_entity_type": "operation",
+    "expected_citation_contains": ["api_key"],
+    "should_abstain": false
+  },
+  {
+    "id": "p020",
+    "question": "What security scheme does api_key use?",
+    "expected_operation": null,
+    "expected_entity_type": "auth_scheme",
+    "expected_citation_contains": ["api_key", "apiKey"],
+    "should_abstain": false
+  },
+  {
+    "id": "p021",
+    "question": "What fields does the Pet schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["id", "name", "status", "photoUrls"],
+    "should_abstain": false
+  },
+  {
+    "id": "p022",
+    "question": "What does the Order schema look like?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["orderId", "petId", "quantity", "status"],
+    "should_abstain": false
+  },
+  {
+    "id": "p023",
+    "question": "What fields does the User schema have?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["username", "email", "password"],
+    "should_abstain": false
+  },
+  {
+    "id": "p024",
+    "question": "What does the ApiResponse schema contain?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["code", "type", "message"],
+    "should_abstain": false
+  },
+  {
+    "id": "p025",
+    "question": "What does the Category schema look like?",
+    "expected_operation": null,
+    "expected_entity_type": "schema",
+    "expected_citation_contains": ["id", "name"],
+    "should_abstain": false
+  },
+  {
+    "id": "p026",
+    "question": "How do I pay for a pet?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "p027",
+    "question": "How do I cancel a subscription?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "p028",
+    "question": "What is the rate limit for the petstore API?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "p029",
+    "question": "How do I request a refund for a pet order?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  },
+  {
+    "id": "p030",
+    "question": "What webhook events does the petstore API emit?",
+    "expected_operation": null,
+    "expected_entity_type": "operation",
+    "expected_citation_contains": [],
+    "should_abstain": true
+  }
+]

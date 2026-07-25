@@ -154,7 +154,7 @@ def extract_auth_schemes(
     revision_id: UUID,
     workspace_id: UUID,
 ) -> list[AuthScheme]:
-    schemes = []
+    schemes: list[AuthScheme] = []
     security_schemes = doc.get("components", {}).get("securitySchemes", {})
     if not isinstance(security_schemes, dict):
         return schemes
@@ -195,7 +195,7 @@ def extract_schemas(
     source_id: UUID,
     api_version: str,
 ) -> list[ApiSchema]:
-    schemas = []
+    schemas: list[ApiSchema] = []
     component_schemas = doc.get("components", {}).get("schemas", {})
     if not isinstance(component_schemas, dict):
         return schemas
@@ -325,7 +325,7 @@ def extract_operations(
     source_id: UUID,
     api_version: str,
 ) -> list[ApiOperation]:
-    operations = []
+    operations: list[ApiOperation] = []
     paths = doc.get("paths", {})
     if not isinstance(paths, dict):
         return operations
@@ -412,7 +412,7 @@ def extract_examples(
     workspace_id: UUID,
 ) -> list[ApiExample]:
     """Extract named examples from components/examples."""
-    examples = []
+    examples: list[ApiExample] = []
     component_examples = doc.get("components", {}).get("examples", {})
     if not isinstance(component_examples, dict):
         return examples
