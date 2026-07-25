@@ -5,6 +5,7 @@ Pure sync: context formatting is CPU-only string work with no I/O.
 """
 
 from dataclasses import dataclass
+from typing import Any
 from uuid import UUID
 
 from fetch.domain.entities import Citation
@@ -20,7 +21,7 @@ class PackedContext:
     source_id_map: dict[str, UUID]  # "S1" -> chunk_id UUID
 
 
-def _format_entry(source_label: str, payload: dict) -> str:
+def _format_entry(source_label: str, payload: dict[str, Any]) -> str:
     """Format a single evidence entry for the context text block."""
     entity_type = payload.get("entity_type", "")
     title = payload.get("title", "")
@@ -79,6 +80,8 @@ class ContextPacker:
                 api_version=payload.get("api_version"),
                 method=payload.get("method"),
                 path=payload.get("path"),
+                reranker_score=hit.score,
+                chunk_text=payload.get("text"),
             )
 
             citations.append(citation)

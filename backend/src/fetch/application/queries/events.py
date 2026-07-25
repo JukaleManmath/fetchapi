@@ -51,6 +51,8 @@ class EvidenceEvent(StreamEvent):
                 "source_pointer": c.source_pointer,
                 "method": c.method,
                 "path": c.path,
+                "reranker_score": c.reranker_score,
+                "chunk_text": c.chunk_text,
             }
             for c in self.citations
         ]

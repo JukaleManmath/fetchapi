@@ -83,9 +83,14 @@ export interface PaginatedResponse<T> {
 export interface Citation {
   source_id: string;
   chunk_id: string;
-  chunk_text: string;
   entity_type: string;
-  score: number;
+  title: string;
+  source_url: string | null;
+  source_pointer: string | null;
+  method: string | null;
+  path: string | null;
+  reranker_score: number | null;
+  chunk_text: string | null;
 }
 
 export interface ChatMessage {
@@ -93,6 +98,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  evidence_citations?: Citation[];
   support_status?: string;
   loading?: boolean;    // true while streaming, false when done
 }

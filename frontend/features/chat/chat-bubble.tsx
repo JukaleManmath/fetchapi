@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { CitationCard } from "./citation-card";
+import { RetrievalInspector } from "./retrieval-inspector";
 import type { ChatMessage } from "@/lib/types";
 
 const STATUS_VARIANT: Record<string, "default" | "warning" | "muted" | "inverted"> = {
@@ -50,6 +51,10 @@ export function ChatBubble({ message }: Props) {
             <CitationCard key={c.chunk_id} citation={c} index={i} />
           ))}
         </div>
+      )}
+
+      {message.evidence_citations && message.evidence_citations.length > 0 && (
+        <RetrievalInspector citations={message.evidence_citations} />
       )}
     </div>
   );
