@@ -31,7 +31,7 @@ Give your AI coding assistant accurate, citation-backed knowledge of any API - n
 
 ## Demo
 
-> Demo recording coming in Phase 8 (Next.js UI). The HTTP API and MCP server are fully functional today.
+> Demo recording coming in Phase 10 (Portfolio release). The full stack — HTTP API, MCP server, and web UI — is functional today.
 
 ```bash
 # Upload Stripe's OpenAPI spec
@@ -381,12 +381,19 @@ fetchapi/
 │   └── tests/
 │       ├── unit/             # Pure logic tests - no infrastructure
 │       ├── integration/      # End-to-end tests against real stack
+│       ├── security/         # SSRF, workspace isolation, prompt injection tests
 │       └── fixtures/         # Edge-case OpenAPI specs (recursive, nullable, invalid, etc.)
 ├── examples/
 │   ├── petstore/             # OpenAPI 3.0.4  - 19 operations
 │   ├── github/               # GHES 3.12      - 962 operations, 765 schemas
 │   └── stripe/               # Stripe API     - 587 operations, 1,431 schemas
-├── frontend/                 # Next.js web UI (Phase 8)
+├── evals/
+│   ├── datasets/             # 90-question eval datasets (petstore, stripe, github)
+│   ├── runners/              # retrieval, answer, validation, and ablation benchmarks
+│   ├── fixtures/             # validation fixtures (15 broken curl requests)
+│   ├── results/              # benchmark output (gitignored)
+│   └── thresholds.json       # Recall@5, MRR, citation accuracy regression thresholds
+├── frontend/                 # Next.js web UI
 ├── infra/
 │   └── compose.yaml          # PostgreSQL · Qdrant · Redis · MinIO · FastAPI
 ├── docs/
@@ -407,8 +414,8 @@ fetchapi/
 - [x] **Phase 6** - Request validation and error diagnosis: deterministic schema-backed validation, curl parsing
 - [x] **Phase 7** - MCP server: 9 structured tools wired to application services
 - [x] **Phase 8** - Next.js web UI: ingest, chat, explorer, validation panel, retrieval inspector
-- [ ] **Phase 9** - Evaluation and hardening: Recall@K, MRR, citation precision, correct abstention rate
-- [ ] **Phase 10** - Portfolio release: README, demo video, eval results, MCP quickstart guide
+- [x] **Phase 9** - Evaluation and hardening: 90-question eval datasets, retrieval/answer/validation/ablation runners, SSRF + workspace isolation + prompt injection security tests, GitHub Actions CI
+- [ ] **Phase 10** - Portfolio release: demo video, eval results table, MCP quickstart guide
 
 ---
 
