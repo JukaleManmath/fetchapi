@@ -117,8 +117,31 @@ export async function listOperations(
   return { items, total: items.length, limit: items.length, offset: 0 };
 }
 
-export function getOperation(operationId: string): Promise<Operation> {
-  return request<Operation>(`/v1/operations/${operationId}`);
+export async function getOperation(operationId: string): Promise<Operation & { description: string | null; security_requirements: Record<string, string[]>[]; source_pointer: string | null }> {
+  const raw = await request<Record<string, unknown>>(`/v1/operations/${operationId}`);
+  return {
+    id: raw.operation_id as string,
+    revision_id: "",
+    operation_id: raw.operation_id_str as string ?? "",
+    method: raw.method as string,
+    path: raw.path as string,
+    summary: (raw.summary as string | null) ?? null,
+    description: (raw.description as string | null) ?? null,
+    tags: (raw.tags as string[]) ?? [],
+    deprecated: (raw.deprecated as boolean) ?? false,
+    security_requirements: (raw.security_requirements as Record<string, string[]>[]) ?? [],
+    source_pointer: (raw.source_pointer as string | null) ?? null,
+  };
+}
+
+export async function getSchema(schemaId: string): Promise<{ id: string; name: string; description: string | null; schema_json: string }> {
+  const raw = await request<Record<string, unknown>>(`/v1/schemas/${schemaId}`);
+  return {
+    id: raw.schema_id as string,
+    name: raw.name as string,
+    description: (raw.description as string | null) ?? null,
+    schema_json: raw.schema_json as string,
+  };
 }
 
 export async function listSchemas(
