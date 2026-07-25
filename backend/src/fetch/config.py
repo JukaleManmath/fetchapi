@@ -93,6 +93,9 @@ class LLMSettings(BaseSettings):
     model_id: str = "meta/llama-3.1-70b-instruct"
     timeout_seconds: float = 60.0
     max_tokens: int = 4096
+    generation_temperature: float = 0.1
+    abstention_min_chunks: int = 1
+    query_max_question_length: int = 2000
 
 
 class EmbeddingsSettings(BaseSettings):

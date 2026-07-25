@@ -113,7 +113,9 @@ def extract_schema_json(
         schema = dict(schema)
         schema["properties"] = {
             k: json.loads(
-                extract_schema_json(v, depth + 1, seen_pointers, f"{pointer}/properties/{k}")
+                extract_schema_json(
+                    v, depth + 1, seen_pointers, f"{pointer}/properties/{k}"
+                )
             )
             for k, v in schema["properties"].items()
         }
@@ -153,9 +155,7 @@ def extract_auth_schemes(
     workspace_id: UUID,
 ) -> list[AuthScheme]:
     schemes = []
-    security_schemes = (
-        doc.get("components", {}).get("securitySchemes", {})
-    )
+    security_schemes = doc.get("components", {}).get("securitySchemes", {})
     if not isinstance(security_schemes, dict):
         return schemes
 
@@ -361,11 +361,11 @@ def extract_operations(
 
             request_body = None
             if "requestBody" in operation_raw:
-                request_body = _extract_request_body(operation_raw["requestBody"], op_id)
+                request_body = _extract_request_body(
+                    operation_raw["requestBody"], op_id
+                )
 
-            responses = _extract_responses(
-                operation_raw.get("responses", {}), op_id
-            )
+            responses = _extract_responses(operation_raw.get("responses", {}), op_id)
 
             operations.append(
                 ApiOperation(
@@ -391,9 +391,7 @@ def extract_operations(
     return operations
 
 
-def _merge_parameters(
-    path_level: list[Any], op_level: list[Any]
-) -> list[Any]:
+def _merge_parameters(path_level: list[Any], op_level: list[Any]) -> list[Any]:
     """Operation-level parameters override path-level ones on (name, in)."""
     merged: dict[tuple[str, str], Any] = {}
     for p in path_level:

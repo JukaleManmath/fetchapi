@@ -152,6 +152,7 @@ async def _run_pipeline(
 
     async with get_session() as session:
         from fetch.infrastructure.db.repositories import PgSourceRepository
+
         source_repo = PgSourceRepository(session)
         source = await source_repo.get(source_id)
         if source is None:
@@ -169,7 +170,9 @@ async def _run_pipeline(
         source_url = source.config_url
         timeout = settings.external_ref.timeout_seconds
         try:
-            async with httpx.AsyncClient(follow_redirects=True, timeout=timeout) as client:
+            async with httpx.AsyncClient(
+                follow_redirects=True, timeout=timeout
+            ) as client:
                 response = await client.get(source_url)
                 response.raise_for_status()
                 raw_content = response.content
@@ -188,7 +191,11 @@ async def _run_pipeline(
     if not snapshot_key:
         snapshot_key = f"snapshots/{source_id}/{revision_id}.raw"
         storage = MinioStorageProvider()
-        content_type = "application/yaml" if raw_content.lstrip()[:1] != b"{" else "application/json"
+        content_type = (
+            "application/yaml"
+            if raw_content.lstrip()[:1] != b"{"
+            else "application/json"
+        )
         await storage.upload(snapshot_key, raw_content, content_type)
 
     async with get_session() as session:
@@ -293,9 +300,7 @@ async def _run_pipeline(
     op_chunks = []
     all_relations = []
     for op in operations:
-        auth_names = [
-            name for req in op.security_requirements for name in req
-        ]
+        auth_names = [name for req in op.security_requirements for name in req]
         op_chunk = build_operation_chunk(
             op, auth_names, api_version, source_id, workspace_id, profile
         )

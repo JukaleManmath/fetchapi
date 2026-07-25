@@ -19,7 +19,6 @@ SSRF blocked ranges: loopback, private, link-local, multicast, cloud metadata.
 import ipaddress
 import json
 import logging
-import re
 import socket
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -27,26 +26,24 @@ from urllib.parse import urljoin, urlparse
 import httpx
 import yaml
 from openapi_spec_validator import OpenAPIV30SpecValidator, OpenAPIV31SpecValidator
-from openapi_spec_validator.readers import read_from_filename
 
-from fetch.config import get_settings
 from fetch.domain.errors import IngestionError
 
 logger = logging.getLogger(__name__)
 
 # IP ranges blocked for SSRF protection
 _BLOCKED_NETWORKS = [
-    ipaddress.ip_network("127.0.0.0/8"),      # loopback
-    ipaddress.ip_network("::1/128"),           # IPv6 loopback
-    ipaddress.ip_network("10.0.0.0/8"),        # private
-    ipaddress.ip_network("172.16.0.0/12"),     # private
-    ipaddress.ip_network("192.168.0.0/16"),    # private
-    ipaddress.ip_network("169.254.0.0/16"),    # link-local (AWS metadata etc.)
-    ipaddress.ip_network("fe80::/10"),         # IPv6 link-local
-    ipaddress.ip_network("224.0.0.0/4"),       # multicast
-    ipaddress.ip_network("fc00::/7"),          # IPv6 unique local
-    ipaddress.ip_network("0.0.0.0/8"),         # "this" network
-    ipaddress.ip_network("100.64.0.0/10"),     # shared address space
+    ipaddress.ip_network("127.0.0.0/8"),  # loopback
+    ipaddress.ip_network("::1/128"),  # IPv6 loopback
+    ipaddress.ip_network("10.0.0.0/8"),  # private
+    ipaddress.ip_network("172.16.0.0/12"),  # private
+    ipaddress.ip_network("192.168.0.0/16"),  # private
+    ipaddress.ip_network("169.254.0.0/16"),  # link-local (AWS metadata etc.)
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
+    ipaddress.ip_network("224.0.0.0/4"),  # multicast
+    ipaddress.ip_network("fc00::/7"),  # IPv6 unique local
+    ipaddress.ip_network("0.0.0.0/8"),  # "this" network
+    ipaddress.ip_network("100.64.0.0/10"),  # shared address space
 ]
 
 _ALLOWED_SCHEMES = {"http", "https"}
@@ -104,7 +101,9 @@ def _count_aliases_in_node(node: Any, seen: set[int] | None = None) -> int:
 _DEFAULT_MAX_ALIASES = 100
 
 
-def load_yaml_safe(content: bytes | str, max_aliases: int = _DEFAULT_MAX_ALIASES) -> dict[str, Any]:
+def load_yaml_safe(
+    content: bytes | str, max_aliases: int = _DEFAULT_MAX_ALIASES
+) -> dict[str, Any]:
     """Parse YAML or JSON content safely.
 
     Raises IngestionError on:
@@ -122,7 +121,9 @@ def load_yaml_safe(content: bytes | str, max_aliases: int = _DEFAULT_MAX_ALIASES
         except json.JSONDecodeError as exc:
             raise IngestionError(f"JSON parse error: {exc}") from exc
         if not isinstance(doc, dict):
-            raise IngestionError("OpenAPI document root must be a mapping, not a scalar or list.")
+            raise IngestionError(
+                "OpenAPI document root must be a mapping, not a scalar or list."
+            )
         return doc  # type: ignore[return-value]
 
     # YAML path: compose first to count aliases before construction
@@ -144,7 +145,9 @@ def load_yaml_safe(content: bytes | str, max_aliases: int = _DEFAULT_MAX_ALIASES
         raise IngestionError(f"YAML parse error: {exc}") from exc
 
     if not isinstance(doc, dict):
-        raise IngestionError("OpenAPI document root must be a mapping, not a scalar or list.")
+        raise IngestionError(
+            "OpenAPI document root must be a mapping, not a scalar or list."
+        )
 
     return doc  # type: ignore[return-value]
 
@@ -294,7 +297,9 @@ class RefResolver:
                 target = _resolve_pointer(self._root, pointer)
                 return self._resolve_node(target, hops)
             except (KeyError, IndexError, ValueError) as exc:
-                raise IngestionError(f"Cannot resolve internal $ref '{ref}': {exc}") from exc
+                raise IngestionError(
+                    f"Cannot resolve internal $ref '{ref}': {exc}"
+                ) from exc
             finally:
                 self._resolving.discard(ref)
         else:
@@ -342,7 +347,9 @@ class RefResolver:
                 if not ref.startswith("#"):
                     url_part = ref.split("#")[0]
                     absolute = (
-                        urljoin(self._base_url, url_part) if self._base_url else url_part
+                        urljoin(self._base_url, url_part)
+                        if self._base_url
+                        else url_part
                     )
                     await self._fetch_and_cache(absolute, hops)
                     # Recurse into the fetched doc to find nested external refs

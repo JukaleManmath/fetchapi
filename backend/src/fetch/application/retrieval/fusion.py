@@ -17,7 +17,7 @@ from fetch.infrastructure.qdrant.models import ChunkHit
 class FusionConfig:
     """Immutable parameters for a single RRF fusion call."""
 
-    k: int = 60   # RRF constant — prevents top-rank results from dominating
+    k: int = 60  # RRF constant — prevents top-rank results from dominating
     top_k: int = 30  # maximum candidates to return after fusion
 
 

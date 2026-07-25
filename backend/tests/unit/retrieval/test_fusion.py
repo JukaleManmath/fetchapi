@@ -78,8 +78,12 @@ def test_overlapping_doc_accumulates_scores() -> None:
     result_by_id = {h.chunk_id: h for h in result}
 
     assert result[0].chunk_id == shared.chunk_id, "shared doc must rank first"
-    assert result_by_id[shared.chunk_id].score > result_by_id[exclusive_a.chunk_id].score
-    assert result_by_id[shared.chunk_id].score > result_by_id[exclusive_b.chunk_id].score
+    assert (
+        result_by_id[shared.chunk_id].score > result_by_id[exclusive_a.chunk_id].score
+    )
+    assert (
+        result_by_id[shared.chunk_id].score > result_by_id[exclusive_b.chunk_id].score
+    )
 
 
 # ── two lists with no overlap ──────────────────────────────────────────────────
@@ -147,12 +151,8 @@ def test_payload_taken_from_first_list_containing_doc() -> None:
     """The payload attached to the fused hit must come from the first list."""
     chunk_id = uuid4()
 
-    hit_in_first = ChunkHit(
-        chunk_id=chunk_id, score=0.9, payload={"source": "first"}
-    )
-    hit_in_second = ChunkHit(
-        chunk_id=chunk_id, score=0.5, payload={"source": "second"}
-    )
+    hit_in_first = ChunkHit(chunk_id=chunk_id, score=0.9, payload={"source": "first"})
+    hit_in_second = ChunkHit(chunk_id=chunk_id, score=0.5, payload={"source": "second"})
 
     result = RRFFusion().fuse([[hit_in_first], [hit_in_second]])
 

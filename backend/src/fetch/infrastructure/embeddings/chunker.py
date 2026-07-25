@@ -401,7 +401,9 @@ def build_chunk_relations(
             auth_chunk = auth_chunks_by_name.get(scheme_name)
             if auth_chunk is not None:
                 relations.append(
-                    _make_rel(op_chunk, auth_chunk, ChunkRelationType.OPERATION_REQUIRES_AUTH)
+                    _make_rel(
+                        op_chunk, auth_chunk, ChunkRelationType.OPERATION_REQUIRES_AUTH
+                    )
                 )
 
     # OPERATION_USES_SCHEMA — schemas referenced in the request body.
@@ -418,7 +420,9 @@ def build_chunk_relations(
                     if schema_name and schema_name in schema_chunk.title:
                         relations.append(
                             _make_rel(
-                                op_chunk, schema_chunk, ChunkRelationType.OPERATION_USES_SCHEMA
+                                op_chunk,
+                                schema_chunk,
+                                ChunkRelationType.OPERATION_USES_SCHEMA,
                             )
                         )
                         break

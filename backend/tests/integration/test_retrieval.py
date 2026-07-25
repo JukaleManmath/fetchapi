@@ -92,7 +92,9 @@ async def _get_profile_uuid() -> str:
         repo = PgEmbeddingProfileRepository(session)
         record = await repo.get_by_version(_EMBEDDING_PROFILE_VERSION)
     if record is None:
-        raise RuntimeError("Embedding profile 'v1' not found in DB — run ingestion first")
+        raise RuntimeError(
+            "Embedding profile 'v1' not found in DB — run ingestion first"
+        )
     return str(record.id)
 
 
@@ -299,12 +301,12 @@ async def test_qdrant_search_dense_returns_hits() -> None:
 
     assert hits, "Dense search returned no hits"
     assert all(h.score > 0 for h in hits), "Expected all hit scores to be positive"
-    assert all(
-        h.payload.get("workspace_id") == str(WORKSPACE_ID) for h in hits
-    ), "All hits must belong to the queried workspace"
-    assert all(
-        h.payload.get("revision_id") == str(revision_id) for h in hits
-    ), "All hits must belong to the queried revision"
+    assert all(h.payload.get("workspace_id") == str(WORKSPACE_ID) for h in hits), (
+        "All hits must belong to the queried workspace"
+    )
+    assert all(h.payload.get("revision_id") == str(revision_id) for h in hits), (
+        "All hits must belong to the queried revision"
+    )
 
 
 # ── Test 6 — BM25 retrieval returns hits ─────────────────────────────────────
@@ -383,9 +385,7 @@ async def test_rrf_fusion_combines_dense_and_bm25() -> None:
     fused = RRFFusion().fuse([dense_hits, bm25_hits], config)
 
     assert fused, "RRF fusion returned no results"
-    assert len(fused) <= top_k, (
-        f"Fused list length {len(fused)} exceeds top_k {top_k}"
-    )
+    assert len(fused) <= top_k, f"Fused list length {len(fused)} exceeds top_k {top_k}"
 
 
 # ── Test 8 — PgQueryRunRepository save and get ────────────────────────────────

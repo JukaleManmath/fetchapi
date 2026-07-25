@@ -19,11 +19,9 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from fetch.domain.errors import (
-    FetchError,
     IngestionError,
-    SourceNotFoundError,
     OperationNotFoundError,
-    SchemaNotFoundError,
+    SourceNotFoundError,
 )
 
 

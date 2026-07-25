@@ -279,8 +279,12 @@ def test_build_operation_chunk_qdrant_point_id_equals_chunk_id():
 
 def test_build_operation_chunk_content_hash_is_deterministic():
     op = _make_operation()
-    chunk1 = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
-    chunk2 = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    chunk1 = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
+    chunk2 = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
     # Text is deterministic; hashes must match even though UUIDs differ.
     assert chunk1.content_hash == chunk2.content_hash
 
@@ -296,8 +300,12 @@ def test_build_operation_chunk_hash_changes_with_profile_version():
         collection_name=PROFILE.collection_name,
         distance_metric=PROFILE.distance_metric,
     )
-    chunk_v1 = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
-    chunk_v2 = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, profile_v2)
+    chunk_v1 = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
+    chunk_v2 = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, profile_v2
+    )
     assert chunk_v1.content_hash != chunk_v2.content_hash
 
 
@@ -355,9 +363,7 @@ def test_build_auth_chunk_includes_name_and_type():
 
 
 def test_build_auth_chunk_http_scheme_details():
-    auth = _make_auth(
-        details={"scheme": "bearer", "bearerFormat": "JWT"}
-    )
+    auth = _make_auth(details={"scheme": "bearer", "bearerFormat": "JWT"})
     chunk = build_auth_chunk(auth, API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
     assert "bearer" in chunk.text
     assert "JWT" in chunk.text
@@ -424,7 +430,9 @@ def test_build_chunk_relations_operation_requires_auth():
     auth_chunks_by_name = {"bearerAuth": auth_chunk}
 
     op = _make_operation(security_requirements=[{"bearerAuth": []}])
-    op_chunk = build_operation_chunk(op, ["bearerAuth"], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    op_chunk = build_operation_chunk(
+        op, ["bearerAuth"], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
 
     relations = build_chunk_relations(
         op_chunk=op_chunk,
@@ -434,7 +442,11 @@ def test_build_chunk_relations_operation_requires_auth():
         error_chunks_by_entity_id={},
     )
 
-    auth_rels = [r for r in relations if r.relation_type == ChunkRelationType.OPERATION_REQUIRES_AUTH]
+    auth_rels = [
+        r
+        for r in relations
+        if r.relation_type == ChunkRelationType.OPERATION_REQUIRES_AUTH
+    ]
     assert len(auth_rels) == 1
     assert auth_rels[0].from_chunk_id == op_chunk.id
     assert auth_rels[0].to_chunk_id == auth_chunk.id
@@ -442,11 +454,15 @@ def test_build_chunk_relations_operation_requires_auth():
 
 def test_build_chunk_relations_operation_has_error():
     error = _make_error()
-    error_chunk = build_error_chunk(error, API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    error_chunk = build_error_chunk(
+        error, API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
     error_chunks_by_id = {error.id: error_chunk}
 
     op = _make_operation()
-    op_chunk = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    op_chunk = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
 
     relations = build_chunk_relations(
         op_chunk=op_chunk,
@@ -456,7 +472,9 @@ def test_build_chunk_relations_operation_has_error():
         error_chunks_by_entity_id=error_chunks_by_id,
     )
 
-    error_rels = [r for r in relations if r.relation_type == ChunkRelationType.OPERATION_HAS_ERROR]
+    error_rels = [
+        r for r in relations if r.relation_type == ChunkRelationType.OPERATION_HAS_ERROR
+    ]
     assert len(error_rels) == 1
     assert error_rels[0].from_chunk_id == op_chunk.id
     assert error_rels[0].to_chunk_id == error_chunk.id
@@ -464,7 +482,9 @@ def test_build_chunk_relations_operation_has_error():
 
 def test_build_chunk_relations_no_relations_when_empty():
     op = _make_operation()
-    op_chunk = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    op_chunk = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
 
     relations = build_chunk_relations(
         op_chunk=op_chunk,
@@ -479,10 +499,14 @@ def test_build_chunk_relations_no_relations_when_empty():
 
 def test_build_chunk_relations_revision_id_propagated():
     error = _make_error()
-    error_chunk = build_error_chunk(error, API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    error_chunk = build_error_chunk(
+        error, API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
 
     op = _make_operation()
-    op_chunk = build_operation_chunk(op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE)
+    op_chunk = build_operation_chunk(
+        op, [], API_VERSION, SOURCE_ID, WORKSPACE_ID, PROFILE
+    )
 
     relations = build_chunk_relations(
         op_chunk=op_chunk,

@@ -401,3 +401,5 @@ class QueryRun:
     reranked_candidate_count: int | None = None
     expanded_candidate_count: int | None = None
     exact_match_found: bool = False
+    prompt_version: str | None = None
+    intent_classification: str | None = None

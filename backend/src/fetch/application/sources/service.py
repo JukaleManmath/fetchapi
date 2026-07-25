@@ -21,7 +21,6 @@ from uuid import UUID, uuid4
 from fetch.config import get_settings
 from fetch.domain.entities import ApiSource, IngestionJob, SourceRevision
 from fetch.domain.enums import IngestionStage, RevisionStatus, SourceType
-from fetch.domain.errors import IngestionError
 from fetch.infrastructure.db.repositories import (
     PgJobRepository,
     PgRevisionRepository,
@@ -37,8 +36,8 @@ logger = logging.getLogger(__name__)
 class CreateSourceResult:
     source_id: UUID
     revision_id: UUID
-    job_id: UUID | None      # None when returning an existing idempotent revision
-    is_duplicate: bool       # True when content hash matched an active revision
+    job_id: UUID | None  # None when returning an existing idempotent revision
+    is_duplicate: bool  # True when content hash matched an active revision
 
 
 class CreateSourceService:
@@ -87,7 +86,7 @@ class CreateSourceService:
             source_type=SourceType.OPENAPI_URL,
             config_url=url,
             config_object_key=None,
-            content_hash=None,   # hash computed after fetch during ingestion
+            content_hash=None,  # hash computed after fetch during ingestion
             source_id=uuid4(),
         )
 

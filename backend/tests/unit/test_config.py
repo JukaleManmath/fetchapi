@@ -169,7 +169,9 @@ class TestSecurityCorsOriginsProperty:
         ]
 
     def test_origins_are_stripped_of_whitespace(self) -> None:
-        sec = SecuritySettings(cors_origins="http://localhost:3000 , https://app.example.com")
+        sec = SecuritySettings(
+            cors_origins="http://localhost:3000 , https://app.example.com"
+        )
         assert sec.cors_origins_list == [
             "http://localhost:3000",
             "https://app.example.com",
@@ -252,7 +254,9 @@ class TestRequiredFieldsMissingRaisesError:
 
     def test_missing_llm_api_key_raises(self) -> None:
         # Verify that omitting LLM_API_KEY entirely causes a ValidationError.
-        env_without_llm_key = {k: v for k, v in _REQUIRED_ENV.items() if k != "LLM_API_KEY"}
+        env_without_llm_key = {
+            k: v for k, v in _REQUIRED_ENV.items() if k != "LLM_API_KEY"
+        }
         # Unset the variable in the environment for this test.
         clean_env = {k: v for k, v in os.environ.items() if k != "LLM_API_KEY"}
         clean_env.update(env_without_llm_key)

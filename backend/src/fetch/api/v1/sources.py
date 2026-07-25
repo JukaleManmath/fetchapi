@@ -10,12 +10,11 @@ GET  /v1/jobs/{job_id}           — poll an ingestion job's current stage
 from uuid import UUID
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
-from fetch.api.dependencies import get_settings_dep, get_workspace_id
+from fetch.api.dependencies import get_workspace_id
 from fetch.application.sources.service import CreateSourceService
 from fetch.config import get_settings
-from fetch.domain.enums import IngestionStage, RevisionStatus
 from fetch.infrastructure.db.repositories import (
     PgJobRepository,
     PgRevisionRepository,

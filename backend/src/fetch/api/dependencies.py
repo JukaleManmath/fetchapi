@@ -5,7 +5,10 @@ All application-layer dependencies are resolved here, not in route handlers.
 
 from uuid import UUID
 
+from fastapi import Request
+
 from fetch.config import get_settings
+from fetch.domain.protocols import LLMProvider
 
 
 def get_workspace_id() -> UUID:
@@ -20,3 +23,8 @@ def get_workspace_id() -> UUID:
 def get_settings_dep() -> object:
     """FastAPI dependency that returns the current Settings object."""
     return get_settings()
+
+
+def get_llm_provider(request: Request) -> LLMProvider:
+    provider: LLMProvider = request.app.state.llm_provider
+    return provider

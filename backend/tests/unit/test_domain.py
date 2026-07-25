@@ -61,9 +61,19 @@ def test_revision_status_values() -> None:
 def test_ingestion_stage_has_all_states() -> None:
     stages = {s.value for s in IngestionStage}
     expected = {
-        "queued", "fetching", "snapshotting", "parsing", "validating",
-        "normalizing", "chunking", "embedding", "indexing", "verifying",
-        "active", "failed", "cancelled",
+        "queued",
+        "fetching",
+        "snapshotting",
+        "parsing",
+        "validating",
+        "normalizing",
+        "chunking",
+        "embedding",
+        "indexing",
+        "verifying",
+        "active",
+        "failed",
+        "cancelled",
     }
     assert stages == expected
 
