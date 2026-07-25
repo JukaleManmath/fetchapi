@@ -402,7 +402,7 @@ fetchapi/
 - [x] **Phase 1** - OpenAPI ingestion: parsing, validation, canonical extraction, job state machine, revision lifecycle
 - [x] **Phase 2** - Chunking and vector indexing: operation/schema/auth chunk projections, Qdrant upsert, BM25 indexing
 - [x] **Phase 3** - Hybrid retrieval: dense + sparse + RRF fusion + cross-encoder reranking + relationship expansion *(MRR and Recall@K evaluation pending)*
-- [ ] **Phase 4** - Grounded Q&A: streamed answers with deterministic citation mapping, support status, abstention
+- [x] **Phase 4** - Grounded Q&A: streamed answers with deterministic citation mapping, support status, abstention
 - [ ] **Phase 5** - Integration code generation: Python, TypeScript, Java with spec-backed validation
 - [ ] **Phase 6** - Request validation and error diagnosis: deterministic schema-backed validation, curl parsing
 - [ ] **Phase 7** - MCP server: 9 structured tools wired to application services
