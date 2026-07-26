@@ -16,7 +16,7 @@ Upload an OpenAPI spec. Connect your editor via MCP. Ask questions, generate int
 [![MCP](https://img.shields.io/badge/MCP-Compatible-7C3AED)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[Quick Start](#quick-start) · [MCP Tools](#mcp-tools) · [HTTP API](#http-api) · [Architecture](#architecture) · [Evaluation](#evaluation) · [Development](#development)
+[Quick Start](#quick-start) · [Screenshots](#screenshots) · [MCP Tools](#mcp-tools) · [HTTP API](#http-api) · [Architecture](#architecture) · [Evaluation](#evaluation) · [Development](#development)
 
 </div>
 
@@ -25,6 +25,37 @@ Upload an OpenAPI spec. Connect your editor via MCP. Ask questions, generate int
 AI coding assistants hallucinate API details because they rely on training data that is months or years out of date. FetchAPI fixes this: it ingests your OpenAPI spec, builds a hybrid retrieval index, and exposes nine MCP tools that give your editor structured, citation-backed knowledge of that API. Every answer cites the exact spec section it came from. When the evidence is insufficient, it says so.
 
 No cloud, no subscription, no pasted docs. Runs entirely in Docker.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="docs/assets/ingest-form.png" alt="Ingest form - upload a file or point at a URL" /></td>
+    <td><img src="docs/assets/ingest-pipeline.png" alt="11-stage ingestion pipeline with live progress" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Upload a spec file or ingest from a URL</em></td>
+    <td align="center"><em>Live pipeline progress - 11 deterministic stages</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/operations-explorer.png" alt="Operations explorer - 962 GitHub operations" /></td>
+    <td><img src="docs/assets/schemas-viewer.png" alt="Schema viewer with JSON schema detail" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Browse extracted operations (GitHub: 962 ops)</em></td>
+    <td align="center"><em>Schemas tab with full JSON schema detail</em></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/chat-interface.png" alt="Chat interface - grounded Q&A" /></td>
+    <td><img src="docs/assets/code-generation.png" alt="Integration code generation in Python, TypeScript, or Java" /></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Grounded Q&A - every answer cites the spec</em></td>
+    <td align="center"><em>Generate integration code in Python, TypeScript, or Java</em></td>
+  </tr>
+</table>
 
 ---
 
