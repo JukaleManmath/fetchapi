@@ -16,7 +16,6 @@ External ref protections (from config):
 SSRF blocked ranges: loopback, private, link-local, multicast, cloud metadata.
 """
 
-import asyncio
 import ipaddress
 import json
 import logging
@@ -280,9 +279,7 @@ class RefResolver:
 
         The root document is mutated and returned.
         """
-        stack: list[tuple[Any, Any]] = list(
-            (self._root, k) for k in self._root
-        )
+        stack: list[tuple[Any, Any]] = [(self._root, k) for k in self._root]
         visited: set[int] = set()
 
         while stack:
@@ -323,7 +320,7 @@ class RefResolver:
                     f"Cannot resolve internal $ref '{ref}': {exc}"
                 ) from exc
         # External ref — use pre-fetched cache (populated by prefetch_external_refs)
-        url_part, fragment = (ref.split("#", 1) + [""])[:2]
+        url_part, fragment = [*ref.split("#", 1), ""][:2]
         absolute = urljoin(self._base_url, url_part) if self._base_url else url_part
         ext_doc = self._external_cache.get(absolute)
         if ext_doc is None:

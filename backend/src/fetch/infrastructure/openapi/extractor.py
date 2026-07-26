@@ -15,8 +15,6 @@ import logging
 from typing import Any
 from uuid import UUID, uuid4
 
-from fetch.infrastructure.openapi.validator import _resolve_pointer
-
 from fetch.domain.entities import (
     ApiExample,
     ApiOperation,
@@ -29,6 +27,7 @@ from fetch.domain.entities import (
     ErrorDefinition,
 )
 from fetch.domain.enums import AuthSchemeType, HttpMethod, ParameterLocation
+from fetch.infrastructure.openapi.validator import _resolve_pointer
 
 logger = logging.getLogger(__name__)
 

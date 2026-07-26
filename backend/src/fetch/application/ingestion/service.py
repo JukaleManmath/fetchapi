@@ -12,6 +12,7 @@ The caller (CreateSourceService) can retry by calling start_ingestion again,
 which creates a new job record and starts a new task.
 """
 
+import asyncio
 import hashlib
 import logging
 from datetime import UTC, datetime
@@ -63,6 +64,25 @@ from fetch.infrastructure.qdrant.repository import QdrantRepository
 from fetch.infrastructure.storage.minio import MinioStorageProvider
 
 logger = logging.getLogger(__name__)
+
+# Registry of active ingestion tasks keyed by job_id.
+# Used by stop-ingestion and delete-source to cancel in-progress work.
+_INGESTION_TASKS: dict[UUID, asyncio.Task[None]] = {}
+
+
+def register_task(job_id: UUID, task: asyncio.Task[None]) -> None:
+    """Register a background ingestion task so it can be cancelled later."""
+    _INGESTION_TASKS[job_id] = task
+    task.add_done_callback(lambda _: _INGESTION_TASKS.pop(job_id, None))
+
+
+def cancel_task(job_id: UUID) -> bool:
+    """Cancel a running ingestion task. Returns True if a task was found and cancelled."""
+    task = _INGESTION_TASKS.get(job_id)
+    if task is None or task.done():
+        return False
+    task.cancel()
+    return True
 
 
 async def _update_job_stage(

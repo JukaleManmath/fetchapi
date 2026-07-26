@@ -183,7 +183,7 @@ class CreateSourceService:
             # session commits on context manager exit
 
         # Start the ingestion pipeline as a background task
-        from fetch.application.ingestion.service import run_ingestion
+        from fetch.application.ingestion.service import register_task, run_ingestion
 
         task = asyncio.create_task(
             run_ingestion(
@@ -196,6 +196,7 @@ class CreateSourceService:
         )
         _background_tasks.add(task)
         task.add_done_callback(_background_tasks.discard)
+        register_task(job_id, task)
 
         logger.info(
             "ingestion_queued",
