@@ -91,6 +91,5 @@ class OllamaEmbeddingProvider:
         )
 
         return [
-            EmbeddingResult(index=i, vector=vec)
-            for i, vec in enumerate(embeddings)
+            EmbeddingResult(index=i, vector=vec) for i, vec in enumerate(embeddings)
         ]

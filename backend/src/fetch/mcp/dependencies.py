@@ -68,7 +68,9 @@ def _get_llm_provider() -> NvidiaNimProvider:
     )
 
 
-def _get_embedding_provider(llm_provider: NvidiaNimProvider) -> NvidiaNimProvider | OllamaEmbeddingProvider:
+def _get_embedding_provider(
+    llm_provider: NvidiaNimProvider,
+) -> NvidiaNimProvider | OllamaEmbeddingProvider:
     settings = get_settings()
     if settings.embeddings.provider == "ollama":
         return OllamaEmbeddingProvider(base_url=settings.embeddings.ollama_base_url)
@@ -112,7 +114,9 @@ async def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
 
     # Resolve embedding profile UUID (same logic as HTTP queries endpoint)
     row = await session.execute(
-        sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+        sa_text(
+            "SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"
+        ),
         {"model": settings.embeddings.model_id},
     )
     profile_row = row.fetchone()
@@ -143,7 +147,9 @@ async def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
         schema_repo=schema_repo,
         chunk_repo=chunk_repo,
     )
-    dense_retriever = DenseRetriever(embedding_provider=embedding_provider, qdrant=qdrant)
+    dense_retriever = DenseRetriever(
+        embedding_provider=embedding_provider, qdrant=qdrant
+    )
     bm25_retriever = BM25Retriever(qdrant=qdrant)
     fusion = RRFFusion()
     reranker = RetrievalReranker(rerank_provider=llm_provider)

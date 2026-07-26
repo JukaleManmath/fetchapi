@@ -495,6 +495,7 @@ def _make_embedding_provider(settings: Settings) -> EmbeddingProvider:
     """Instantiate the configured embedding provider."""
     if settings.embeddings.provider == "ollama":
         from fetch.infrastructure.llm.ollama import OllamaEmbeddingProvider
+
         return OllamaEmbeddingProvider(base_url=settings.embeddings.ollama_base_url)
     return NvidiaNimProvider(
         api_key=settings.embeddings.api_key.get_secret_value(),

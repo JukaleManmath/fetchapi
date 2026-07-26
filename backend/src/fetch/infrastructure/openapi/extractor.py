@@ -35,7 +35,9 @@ MAX_SCHEMA_DEPTH = 5
 
 _HTTP_METHODS = {m.value.lower() for m in HttpMethod}
 
-_DOC_ROOT: dict[str, Any] = {}  # module-level ref to current doc; set per extraction batch
+_DOC_ROOT: dict[
+    str, Any
+] = {}  # module-level ref to current doc; set per extraction batch
 
 
 def _deref(node: Any, root: dict[str, Any], seen: set[str]) -> Any:
@@ -304,7 +306,9 @@ def _extract_parameters(
                 required=bool(raw.get("required", False)),
                 deprecated=bool(raw.get("deprecated", False)),
                 description=raw.get("description"),
-                schema_json=extract_schema_json(schema_raw, root=root) if schema_raw else None,
+                schema_json=extract_schema_json(schema_raw, root=root)
+                if schema_raw
+                else None,
                 example_json=json.dumps(raw["example"], default=str)
                 if "example" in raw
                 else None,
@@ -365,7 +369,9 @@ def _extract_responses(
                 operation_id=operation_uuid,
                 status_code=str(status_code),
                 description=raw_resp.get("description"),
-                content_schemas=_extract_content_schemas(raw_resp.get("content", {}), root),
+                content_schemas=_extract_content_schemas(
+                    raw_resp.get("content", {}), root
+                ),
                 headers=headers,
             )
         )
@@ -419,7 +425,9 @@ def extract_operations(
                     operation_raw["requestBody"], op_id, doc
                 )
 
-            responses = _extract_responses(operation_raw.get("responses", {}), op_id, doc)
+            responses = _extract_responses(
+                operation_raw.get("responses", {}), op_id, doc
+            )
 
             operations.append(
                 ApiOperation(

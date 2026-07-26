@@ -273,5 +273,8 @@ class DeleteSourceService:
 
         logger.info(
             "source_deleted",
-            extra={"source_id": str(source_id), "workspace_id": str(self._workspace_id)},
+            extra={
+                "source_id": str(source_id),
+                "workspace_id": str(self._workspace_id),
+            },
         )

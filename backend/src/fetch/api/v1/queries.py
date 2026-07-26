@@ -102,7 +102,9 @@ async def stream_query(
 
         # Qdrant payloads store embedding_profile_id (UUID), not the version string.
         row = await session.execute(
-            sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+            sa_text(
+                "SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"
+            ),
             {"model": settings.embeddings.model_id},
         )
         profile_row = row.fetchone()
@@ -120,7 +122,10 @@ async def stream_query(
             top_k=settings.retrieval.dense_candidate_limit,
             embedding_profile_version=embedding_profile_version,
         ),
-        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit, embedding_profile_version=embedding_profile_version),
+        bm25=BM25RetrievalConfig(
+            top_k=settings.retrieval.sparse_candidate_limit,
+            embedding_profile_version=embedding_profile_version,
+        ),
         fusion=FusionConfig(top_k=settings.retrieval.fused_candidate_limit),
         rerank=RerankConfig(
             model_id=settings.reranker.model_id,
@@ -145,8 +150,12 @@ async def stream_query(
                     schema_repo=schema_repo,
                     chunk_repo=chunk_repo,
                 )
-                embedding_provider = getattr(request.app.state, "embedding_provider", nim)
-                dense_retriever = DenseRetriever(embedding_provider=embedding_provider, qdrant=qdrant)
+                embedding_provider = getattr(
+                    request.app.state, "embedding_provider", nim
+                )
+                dense_retriever = DenseRetriever(
+                    embedding_provider=embedding_provider, qdrant=qdrant
+                )
                 bm25_retriever = BM25Retriever(qdrant=qdrant)
                 fusion = RRFFusion()
                 reranker = RetrievalReranker(rerank_provider=nim)

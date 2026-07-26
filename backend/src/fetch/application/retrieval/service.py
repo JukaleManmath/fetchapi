@@ -147,7 +147,11 @@ class RetrievalService:
         expanded = await self._expander.expand(reranked, revision_id, config.expansion)
 
         # 7. Cap evidence then pack context
-        capped = expanded[:config.final_evidence_limit] if config.final_evidence_limit > 0 else expanded
+        capped = (
+            expanded[: config.final_evidence_limit]
+            if config.final_evidence_limit > 0
+            else expanded
+        )
         packed = self._packer.pack(capped)
 
         retrieval_ms = int((time.monotonic() - t0) * 1000)

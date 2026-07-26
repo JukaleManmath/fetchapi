@@ -189,7 +189,9 @@ async def list_sources() -> list[SourceResponse]:
             active_revision_id=row["active_revision_id"],
             active_api_title=row["active_api_title"],
             active_api_version=row["active_api_version"],
-            ingestion_stage=row["ingestion_stage"] if row["active_revision_id"] is None else None,
+            ingestion_stage=row["ingestion_stage"]
+            if row["active_revision_id"] is None
+            else None,
             latest_job_id=row["latest_job_id"],
             created_at=row["created_at"].isoformat(),
         )
