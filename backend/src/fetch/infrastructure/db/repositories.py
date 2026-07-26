@@ -174,9 +174,11 @@ class PgSourceRepository:
             row.updated_at = source.updated_at
 
     async def delete(self, source_id: UUID) -> None:
-        row = await self._session.get(ApiSourceModel, source_id)
-        if row is not None:
-            await self._session.delete(row)
+        from sqlalchemy import delete as sa_delete
+
+        await self._session.execute(
+            sa_delete(ApiSourceModel).where(ApiSourceModel.id == source_id)
+        )
 
 
 # ── RevisionRepository ────────────────────────────────────────────────────────
