@@ -99,9 +99,6 @@ services:
       QDRANT_HOST: qdrant
       REDIS_URL: redis://redis:6379/0
       OBJECT_STORAGE_ENDPOINT: http://minio:9000
-    volumes:
-      # Mount source for hot reload during development
-      - ../backend/src:/app/src
     ports:
       - "8000:8000"
     depends_on:
