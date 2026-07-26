@@ -10,26 +10,38 @@ const SESSION_KEY = "fetchapi_active_job";
 
 export default function IngestPage() {
   const router = useRouter();
-  const [job, setJob] = useState<IngestionJob | null>(null);
+  // Initialise from sessionStorage synchronously to avoid flash of empty form
+  const [job, setJob] = useState<IngestionJob | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored) as IngestionJob;
+    } catch {
+      return null;
+    }
+  });
 
-  // Restore in-progress job from sessionStorage on mount
+  // Refresh job state from API on mount (sessionStorage may be stale)
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
     if (!stored) return;
-    const { jobId } = JSON.parse(stored) as { jobId: string };
-    getJob(jobId)
+    const cached = JSON.parse(stored) as IngestionJob;
+    getJob(cached.id)
       .then((j) => {
-        if (j.stage !== "ACTIVE" && j.stage !== "FAILED") {
-          setJob(j);
-        } else {
+        if (j.stage === "ACTIVE" || j.stage === "FAILED") {
           sessionStorage.removeItem(SESSION_KEY);
         }
+        setJob(j);
       })
-      .catch(() => sessionStorage.removeItem(SESSION_KEY));
+      .catch(() => {
+        sessionStorage.removeItem(SESSION_KEY);
+        setJob(null);
+      });
   }, []);
 
   function handleJobCreated(j: IngestionJob) {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ jobId: j.id }));
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(j));
     setJob(j);
   }
 

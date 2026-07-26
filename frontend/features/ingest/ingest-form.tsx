@@ -194,6 +194,10 @@ const STAGES = [
   "PARSING",
   "VALIDATING",
   "NORMALIZING",
+  "CHUNKING",
+  "EMBEDDING",
+  "INDEXING",
+  "VERIFYING",
   "ACTIVE",
 ] as const;
 
@@ -215,6 +219,7 @@ export function JobTracker({ job: initialJob, onReset, onView }: JobTrackerProps
     const interval = setInterval(async () => {
       try {
         const updated = await getJob(job.id);
+        sessionStorage.setItem("fetchapi_active_job", JSON.stringify(updated));
         setJob(updated);
       } catch {
         // ignore transient errors

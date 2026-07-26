@@ -59,7 +59,7 @@ function normaliseJob(raw: Record<string, unknown>): IngestionJob {
     id: (raw.job_id ?? raw.id) as string,
     source_id: raw.source_id as string,
     revision_id: raw.revision_id as string,
-    stage: (raw.stage ?? "QUEUED") as IngestionJob["stage"],
+    stage: ((raw.stage as string | undefined)?.toUpperCase() ?? "QUEUED") as IngestionJob["stage"],
     error_message: (raw.error_message as string | null) ?? null,
     created_at: (raw.created_at as string) ?? "",
     updated_at: (raw.updated_at as string) ?? "",
