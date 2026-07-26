@@ -15,6 +15,8 @@ import logging
 from typing import Any
 from uuid import UUID, uuid4
 
+from fetch.infrastructure.openapi.validator import _resolve_pointer
+
 from fetch.domain.entities import (
     ApiExample,
     ApiOperation,
@@ -33,6 +35,26 @@ logger = logging.getLogger(__name__)
 MAX_SCHEMA_DEPTH = 5
 
 _HTTP_METHODS = {m.value.lower() for m in HttpMethod}
+
+_DOC_ROOT: dict[str, Any] = {}  # module-level ref to current doc; set per extraction batch
+
+
+def _deref(node: Any, root: dict[str, Any], seen: set[str]) -> Any:
+    """Follow a $ref one level and return the target, or return node as-is.
+
+    Only follows internal (#/...) refs.  Never recurses deeper — callers
+    must call _deref again if they need to follow further refs.
+    Cycle guard via `seen` set of ref strings.
+    """
+    if not isinstance(node, dict) or "$ref" not in node:
+        return node
+    ref: str = node["$ref"]
+    if not ref.startswith("#") or ref in seen:
+        return node
+    try:
+        return _resolve_pointer(root, ref[1:])
+    except (KeyError, IndexError, ValueError):
+        return node
 
 
 # ── Path normalization ─────────────────────────────────────────────────────────
@@ -83,44 +105,67 @@ def normalize_schema_types(schema: dict[str, Any]) -> dict[str, Any]:
 # ── Schema extraction with depth + cycle guard ─────────────────────────────────
 
 
+def _schema_to_dict(
+    node: Any,
+    root: dict[str, Any],
+    depth: int,
+    seen_refs: set[str],
+) -> Any:
+    """Recursively serialize a schema node to a plain JSON-safe dict.
+
+    - Follows $ref strings on demand (never materializes shared object graphs).
+    - Caps recursion at MAX_SCHEMA_DEPTH.
+    - Breaks $ref cycles via seen_refs.
+    - Works on the original unresolved doc — no cyclic Python object graphs.
+    """
+    if depth > MAX_SCHEMA_DEPTH:
+        return {"$ref": "#/depth-limit-reached"}
+
+    if isinstance(node, dict):
+        if "$ref" in node:
+            ref: str = node["$ref"]
+            if not ref.startswith("#") or ref in seen_refs:
+                return {"$ref": ref}
+            try:
+                target = _resolve_pointer(root, ref[1:])
+            except (KeyError, IndexError, ValueError):
+                return {"$ref": ref}
+            return _schema_to_dict(target, root, depth + 1, seen_refs | {ref})
+        result = {}
+        for k, v in node.items():
+            result[k] = _schema_to_dict(v, root, depth + 1, seen_refs)
+        return result
+    if isinstance(node, list):
+        return [_schema_to_dict(item, root, depth + 1, seen_refs) for item in node]
+    return node
+
+
 def extract_schema_json(
     schema: dict[str, Any],
+    root: dict[str, Any] | None = None,
+    pointer: str = "",
     depth: int = 0,
     seen_pointers: set[str] | None = None,
-    pointer: str = "",
+    memo: dict[int, Any] | None = None,
 ) -> str:
-    """Serialize a schema to JSON, capping recursion at MAX_SCHEMA_DEPTH.
+    """Serialize a schema node to a JSON string.
 
-    Beyond the cap, inserts a {"$ref": pointer} placeholder.
-    Cycles are detected via pointer seen-set.
+    Works on the original unresolved document — follows $ref strings lazily
+    rather than materializing a cyclic resolved object graph.
     """
+    if root is None:
+        root = {}
     if seen_pointers is None:
         seen_pointers = set()
 
     if pointer and pointer in seen_pointers:
-        logger.debug("openapi_schema_cycle", extra={"pointer": pointer})
         return json.dumps({"$ref": pointer})
-
     if depth > MAX_SCHEMA_DEPTH:
         return json.dumps({"$ref": pointer or "#/depth-limit-reached"})
 
-    if pointer:
-        seen_pointers = seen_pointers | {pointer}
-
-    schema = normalize_schema_types(schema)
-
-    if "properties" in schema and isinstance(schema["properties"], dict):
-        schema = dict(schema)
-        schema["properties"] = {
-            k: json.loads(
-                extract_schema_json(
-                    v, depth + 1, seen_pointers, f"{pointer}/properties/{k}"
-                )
-            )
-            for k, v in schema["properties"].items()
-        }
-
-    return json.dumps(schema, default=str)
+    safe = _schema_to_dict(schema, root, 0, {pointer} if pointer else set())
+    safe = normalize_schema_types(safe) if isinstance(safe, dict) else safe
+    return json.dumps(safe, default=str)
 
 
 # ── Server extraction ──────────────────────────────────────────────────────────
@@ -216,7 +261,7 @@ def extract_schemas(
                 workspace_id=workspace_id,
                 name=name,
                 description=raw.get("description"),
-                schema_json=extract_schema_json(raw, pointer=pointer),
+                schema_json=extract_schema_json(raw, root=doc, pointer=pointer),
                 source_pointer=pointer,
                 logical_key=logical_key,
                 nullable=nullable,
@@ -233,9 +278,14 @@ def _extract_parameters(
     raw_params: list[Any],
     revision_id: UUID,
     operation_uuid: UUID,
+    root: dict[str, Any],
 ) -> list[ApiParameter]:
     params = []
     for raw in raw_params:
+        if not isinstance(raw, dict):
+            continue
+        # Follow a top-level $ref on the parameter object itself
+        raw = _deref(raw, root, set())
         if not isinstance(raw, dict):
             continue
         location_str = raw.get("in", "query")
@@ -255,7 +305,7 @@ def _extract_parameters(
                 required=bool(raw.get("required", False)),
                 deprecated=bool(raw.get("deprecated", False)),
                 description=raw.get("description"),
-                schema_json=extract_schema_json(schema_raw) if schema_raw else None,
+                schema_json=extract_schema_json(schema_raw, root=root) if schema_raw else None,
                 example_json=json.dumps(raw["example"], default=str)
                 if "example" in raw
                 else None,
@@ -265,38 +315,43 @@ def _extract_parameters(
     return params
 
 
-def _extract_content_schemas(content: Any) -> dict[str, str]:
+def _extract_content_schemas(content: Any, root: dict[str, Any]) -> dict[str, str]:
     """Map content-type → serialized JSON Schema string."""
     if not isinstance(content, dict):
         return {}
     result = {}
     for media_type, media_obj in content.items():
         if isinstance(media_obj, dict) and "schema" in media_obj:
-            result[media_type] = extract_schema_json(media_obj["schema"])
+            result[media_type] = extract_schema_json(media_obj["schema"], root=root)
     return result
 
 
 def _extract_request_body(
     raw_body: dict[str, Any],
     operation_uuid: UUID,
+    root: dict[str, Any],
 ) -> ApiRequestBody:
     return ApiRequestBody(
         id=uuid4(),
         operation_id=operation_uuid,
         required=bool(raw_body.get("required", False)),
         description=raw_body.get("description"),
-        content_schemas=_extract_content_schemas(raw_body.get("content", {})),
+        content_schemas=_extract_content_schemas(raw_body.get("content", {}), root),
     )
 
 
 def _extract_responses(
     raw_responses: dict[str, Any],
     operation_uuid: UUID,
+    root: dict[str, Any],
 ) -> list[ApiResponse]:
     responses = []
     if not isinstance(raw_responses, dict):
         return responses
     for status_code, raw_resp in raw_responses.items():
+        if not isinstance(raw_resp, dict):
+            continue
+        raw_resp = _deref(raw_resp, root, set())
         if not isinstance(raw_resp, dict):
             continue
         raw_headers = raw_resp.get("headers", {})
@@ -311,7 +366,7 @@ def _extract_responses(
                 operation_id=operation_uuid,
                 status_code=str(status_code),
                 description=raw_resp.get("description"),
-                content_schemas=_extract_content_schemas(raw_resp.get("content", {})),
+                content_schemas=_extract_content_schemas(raw_resp.get("content", {}), root),
                 headers=headers,
             )
         )
@@ -357,15 +412,15 @@ def extract_operations(
             op_params_raw: list[Any] = operation_raw.get("parameters", [])
             all_params_raw = _merge_parameters(path_level_params, op_params_raw)
 
-            parameters = _extract_parameters(all_params_raw, revision_id, op_id)
+            parameters = _extract_parameters(all_params_raw, revision_id, op_id, doc)
 
             request_body = None
             if "requestBody" in operation_raw:
                 request_body = _extract_request_body(
-                    operation_raw["requestBody"], op_id
+                    operation_raw["requestBody"], op_id, doc
                 )
 
-            responses = _extract_responses(operation_raw.get("responses", {}), op_id)
+            responses = _extract_responses(operation_raw.get("responses", {}), op_id, doc)
 
             operations.append(
                 ApiOperation(

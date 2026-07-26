@@ -21,7 +21,6 @@ import ipaddress
 import json
 import logging
 import socket
-import threading
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -267,65 +266,75 @@ class RefResolver:
         self._max_hops = max_hops
         self._max_bytes = max_bytes
         self._timeout = timeout
-        # Maps $ref string → resolved node (prevents re-fetching)
+        # Maps absolute URL → fetched external doc (prevents re-fetching)
         self._external_cache: dict[str, dict[str, Any]] = {}
-        # Tracks refs currently on the call stack for cycle detection
-        self._resolving: set[str] = set()
 
     def resolve(self) -> dict[str, Any]:
-        """Return a fully resolved copy of the root document."""
-        return self._resolve_node(self._root, hops=0)  # type: ignore[no-any-return]
+        """Resolve all $refs in-place using shared references (no copying).
 
-    def _resolve_node(self, node: Any, hops: int) -> Any:
-        if isinstance(node, dict):
-            if "$ref" in node:
-                return self._resolve_ref(node["$ref"], hops)
-            return {k: self._resolve_node(v, hops) for k, v in node.items()}
-        if isinstance(node, list):
-            return [self._resolve_node(item, hops) for item in node]
-        return node
+        Replaces each {"$ref": "..."} dict with a direct Python reference to the
+        target node.  Multiple $refs to the same component share one object in
+        memory, keeping RAM proportional to the original document size regardless
+        of how many times each schema is referenced.  Uses an explicit stack so
+        there is no Python recursion depth risk.
 
-    def _resolve_ref(self, ref: str, hops: int) -> Any:
-        # Cycle detection
-        if ref in self._resolving:
-            logger.debug("openapi_ref_cycle_detected", extra={"ref": ref})
-            return {"$ref": ref}  # leave as-is
+        The root document is mutated and returned.
+        """
+        stack: list[tuple[Any, Any]] = list(
+            (self._root, k) for k in self._root
+        )
+        visited: set[int] = set()
 
+        while stack:
+            container, key = stack.pop()
+            node = container[key]
+
+            if isinstance(node, dict):
+                if "$ref" in node:
+                    ref: str = node["$ref"]
+                    target = self._lookup_ref(ref)
+                    if target is not None and target is not node:
+                        container[key] = target
+                        # Re-queue only if target's children haven't been processed.
+                        if id(target) not in visited:
+                            stack.append((container, key))
+                else:
+                    nid = id(node)
+                    if nid not in visited:
+                        visited.add(nid)
+                        for k in node:
+                            stack.append((node, k))
+            elif isinstance(node, list):
+                nid = id(node)
+                if nid not in visited:
+                    visited.add(nid)
+                    for i in range(len(node)):
+                        stack.append((node, i))
+
+        return self._root
+
+    def _lookup_ref(self, ref: str) -> Any | None:
+        """Return the target object for a $ref string without copying it."""
         if ref.startswith("#"):
-            # Internal reference
-            self._resolving.add(ref)
             try:
-                pointer = ref[1:]  # strip leading '#'
-                target = _resolve_pointer(self._root, pointer)
-                return self._resolve_node(target, hops)
+                return _resolve_pointer(self._root, ref[1:])
             except (KeyError, IndexError, ValueError) as exc:
                 raise IngestionError(
                     f"Cannot resolve internal $ref '{ref}': {exc}"
                 ) from exc
-            finally:
-                self._resolving.discard(ref)
-        else:
-            # External reference
-            return self._resolve_external_ref_sync(ref, hops)
-
-    def _resolve_external_ref_sync(self, ref: str, hops: int) -> Any:
-        """Synchronous wrapper — external refs must be resolved before calling resolve()
-        via resolve_external_refs_async(), or this will raise."""
-        if ref in self._external_cache:
-            fragment = ""
-            url_part = ref
-            if "#" in ref:
-                url_part, fragment = ref.split("#", 1)
-            ext_doc = self._external_cache[url_part]
-            target = _resolve_pointer(ext_doc, fragment) if fragment else ext_doc
-            self._resolving.add(ref)
-            try:
-                return self._resolve_node(target, hops)
-            finally:
-                self._resolving.discard(ref)
-        # If not pre-cached, leave as-is (caller should use async resolve)
-        logger.debug("openapi_external_ref_not_cached", extra={"ref": ref})
-        return {"$ref": ref}
+        # External ref — use pre-fetched cache (populated by prefetch_external_refs)
+        url_part, fragment = (ref.split("#", 1) + [""])[:2]
+        absolute = urljoin(self._base_url, url_part) if self._base_url else url_part
+        ext_doc = self._external_cache.get(absolute)
+        if ext_doc is None:
+            logger.debug("openapi_external_ref_not_cached", extra={"ref": ref})
+            return None
+        try:
+            return _resolve_pointer(ext_doc, fragment) if fragment else ext_doc
+        except (KeyError, IndexError, ValueError) as exc:
+            raise IngestionError(
+                f"Cannot resolve external $ref '{ref}': {exc}"
+            ) from exc
 
     async def _fetch_and_cache(self, url: str, hops: int) -> None:
         if url in self._external_cache:
@@ -370,41 +379,18 @@ class RefResolver:
                     work.append((item, hops))
 
 
-async def _resolve_with_large_stack(resolver: RefResolver) -> dict[str, Any]:
-    """Run resolver.resolve() in a dedicated thread with a 64 MB C-stack.
-
-    Python's default thread stack (8 MB on Linux) overflows with SIGSEGV when
-    resolving deeply nested specs like Stripe.  A 64 MB stack gives ample
-    headroom without risking OOM on containers with multiple GB of RAM.
-    """
-    loop = asyncio.get_running_loop()
-    future: asyncio.Future[dict[str, Any]] = loop.create_future()
-
-    def _worker() -> None:
-        try:
-            result = resolver.resolve()
-            loop.call_soon_threadsafe(future.set_result, result)
-        except Exception as exc:  # noqa: BLE001
-            loop.call_soon_threadsafe(future.set_exception, exc)
-
-    old_size = threading.stack_size(64 * 1024 * 1024)
-    try:
-        t = threading.Thread(target=_worker, daemon=True)
-        t.start()
-    finally:
-        threading.stack_size(old_size or 0)
-
-    return await future
-
-
 async def load_and_resolve(
     content: bytes,
     source_url: str | None = None,
     max_aliases: int = _DEFAULT_MAX_ALIASES,
 ) -> tuple[dict[str, Any], str]:
-    """Full pipeline: load → validate → resolve refs.
+    """Full pipeline: load → validate → fetch external refs.
 
-    Returns (resolved_doc, openapi_version).
+    Returns (doc, openapi_version).  Internal $refs are left as strings;
+    callers use _resolve_pointer(doc, ref[1:]) to follow them on demand.
+    External refs are pre-fetched into RefResolver._external_cache but the
+    doc itself is not mutated — keeping memory proportional to the raw spec.
+
     Raises IngestionError on any failure.
     """
     doc = load_yaml_safe(content, max_aliases=max_aliases)
@@ -413,5 +399,5 @@ async def load_and_resolve(
 
     resolver = RefResolver(doc, base_url=source_url)
     await resolver.prefetch_external_refs()
-    resolved = await _resolve_with_large_stack(resolver)
-    return resolved, version
+    # External refs are now cached in resolver but doc $ref strings are intact.
+    return doc, version
