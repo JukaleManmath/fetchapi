@@ -69,7 +69,11 @@ export default function SourcesPage() {
               <ul className="flex flex-col gap-2.5 stagger" role="list">
                 {sources.map((source, i) => (
                   <li key={source.id}>
-                    <SourceCard source={source} index={i} />
+                    <SourceCard
+                      source={source}
+                      index={i}
+                      onDelete={() => setSources((s) => s.filter((x) => x.id !== source.id))}
+                    />
                   </li>
                 ))}
               </ul>

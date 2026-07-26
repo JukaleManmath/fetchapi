@@ -19,6 +19,16 @@ export interface Source {
   created_at: string;
   active_revision_id: string | null;
   ingestion_stage: string | null;
+  latest_job_id: string | null;
+}
+
+export interface JobLog {
+  id: string;
+  job_id: string;
+  created_at: string;
+  stage: string | null;
+  level: string;
+  message: string;
 }
 
 export interface SourceRevision {

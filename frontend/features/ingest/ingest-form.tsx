@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { Upload, Link2, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
-import { getJob } from "@/lib/api";
+import { cancelJob, getJob } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -212,10 +212,12 @@ export function JobTracker({ job: initialJob, onReset, onView }: JobTrackerProps
 
   const isFailed = job.stage === "FAILED";
   const isDone = job.stage === "ACTIVE";
+  const isCancelled = job.stage === "CANCELLED";
+  const isInProgress = !isDone && !isFailed && !isCancelled;
 
   // Poll every 3s while ingestion is in progress
   useEffect(() => {
-    if (isDone || isFailed) return;
+    if (isDone || isFailed || isCancelled) return;
     const interval = setInterval(async () => {
       try {
         const updated = await getJob(job.id);
@@ -251,6 +253,14 @@ export function JobTracker({ job: initialJob, onReset, onView }: JobTrackerProps
             </div>
             <h2 className="font-display text-2xl font-bold text-ink">Ingestion failed</h2>
             <p className="text-sm text-ink-3 mt-1">{job.error_message ?? "An error occurred."}</p>
+          </>
+        ) : isCancelled ? (
+          <>
+            <div className="w-14 h-14 rounded-full border-2 border-border-2 bg-surface-1 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle size={26} className="text-ink-3" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-ink">Ingestion cancelled</h2>
+            <p className="text-sm text-ink-3 mt-1">The ingestion was stopped before completing.</p>
           </>
         ) : (
           <>
@@ -325,9 +335,26 @@ export function JobTracker({ job: initialJob, onReset, onView }: JobTrackerProps
             View source <ArrowRight size={15} />
           </Button>
         )}
-        {(isFailed || isDone) && (
+        {(isFailed || isDone || isCancelled) && (
           <Button variant="secondary" size="md" className="w-full" onClick={onReset}>
             Ingest another spec
+          </Button>
+        )}
+        {isInProgress && (
+          <Button
+            variant="secondary"
+            size="md"
+            className="w-full"
+            onClick={async () => {
+              try {
+                await cancelJob(job.id);
+              } catch {
+                // ignore — job may have finished between click and request
+              }
+              onReset();
+            }}
+          >
+            Stop ingestion
           </Button>
         )}
       </div>

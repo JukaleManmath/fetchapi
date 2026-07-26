@@ -3,6 +3,7 @@ import type {
   Citation,
   GenerationResult,
   IngestionJob,
+  JobLog,
   Operation,
   PaginatedResponse,
   Schema,
@@ -36,6 +37,7 @@ function normaliseSource(raw: Record<string, unknown>): Source {
     created_at: raw.created_at as string,
     active_revision_id: (raw.active_revision_id as string | null) ?? null,
     ingestion_stage: (raw.ingestion_stage as string | null) ?? null,
+    latest_job_id: (raw.latest_job_id as string | null) ?? null,
   };
 }
 
@@ -47,6 +49,14 @@ export async function listSources(): Promise<Source[]> {
 export async function getSource(id: string): Promise<Source> {
   const raw = await request<Record<string, unknown>>(`/v1/sources/${id}`);
   return normaliseSource(raw);
+}
+
+export async function deleteSource(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/v1/sources/${id}`, { method: "DELETE" });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${res.statusText}${body ? `: ${body}` : ""}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +103,16 @@ export async function ingestFromFile(name: string, file: File): Promise<Ingestio
 export async function getJob(jobId: string): Promise<IngestionJob> {
   const raw = await request<Record<string, unknown>>(`/v1/jobs/${jobId}`);
   return normaliseJob(raw);
+}
+
+export async function cancelJob(jobId: string): Promise<void> {
+  await request<Record<string, unknown>>(`/v1/jobs/${jobId}/cancel`, {
+    method: "POST",
+  });
+}
+
+export async function getJobLogs(jobId: string): Promise<JobLog[]> {
+  return request<JobLog[]>(`/v1/jobs/${jobId}/logs`);
 }
 
 // ---------------------------------------------------------------------------
