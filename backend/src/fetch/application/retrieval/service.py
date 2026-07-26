@@ -56,6 +56,7 @@ class RetrievalConfig:
     fusion: FusionConfig
     rerank: RerankConfig
     expansion: ExpansionConfig
+    final_evidence_limit: int = 10  # cap applied after expansion, before packing
 
 
 class RetrievalService:
@@ -145,8 +146,9 @@ class RetrievalService:
         # 6. Relationship expansion
         expanded = await self._expander.expand(reranked, revision_id, config.expansion)
 
-        # 7. Pack context
-        packed = self._packer.pack(expanded)
+        # 7. Cap evidence then pack context
+        capped = expanded[:config.final_evidence_limit] if config.final_evidence_limit > 0 else expanded
+        packed = self._packer.pack(capped)
 
         retrieval_ms = int((time.monotonic() - t0) * 1000)
 

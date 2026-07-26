@@ -127,6 +127,7 @@ async def stream_query(
             top_n=settings.retrieval.rerank_limit,
         ),
         expansion=ExpansionConfig(),
+        final_evidence_limit=settings.retrieval.final_evidence_limit,
     )
 
     async def event_generator() -> AsyncIterator[str]:

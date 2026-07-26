@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
@@ -19,6 +20,13 @@ from fetch.domain.enums import GenerationLanguage, SupportStatus
 from fetch.domain.protocols import GenerationConfig, LLMMessage, LLMProvider
 
 logger = logging.getLogger(__name__)
+
+_CODE_FENCE_RE = re.compile(r"^```[^\n]*\n?(.*?)```\s*$", re.DOTALL)
+
+
+def _strip_code_fences(text: str) -> str:
+    m = _CODE_FENCE_RE.match(text.strip())
+    return m.group(1).strip() if m else text.strip()
 
 
 class IntegrationService:
@@ -77,6 +85,9 @@ class IntegrationService:
         t_gen = time.monotonic()
         generated_code: str = await self._llm.generate(messages, gen_config)
         generation_ms = int((time.monotonic() - t_gen) * 1000)
+
+        # Strip markdown code fences the LLM may wrap output in
+        generated_code = _strip_code_fences(generated_code)
 
         # 4. Validate
         t_val = time.monotonic()
