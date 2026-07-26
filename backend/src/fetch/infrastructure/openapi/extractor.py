@@ -49,8 +49,8 @@ def _deref(node: Any, root: dict[str, Any], seen: set[str]) -> Any:
     """
     if not isinstance(node, dict) or "$ref" not in node:
         return node
-    ref: str = node["$ref"]
-    if not ref.startswith("#") or ref in seen:
+    ref = node["$ref"]
+    if not isinstance(ref, str) or not ref.startswith("#") or ref in seen:
         return node
     try:
         return _resolve_pointer(root, ref[1:])
@@ -124,9 +124,9 @@ def _schema_to_dict(
 
     if isinstance(node, dict):
         if "$ref" in node:
-            ref: str = node["$ref"]
-            if not ref.startswith("#") or ref in seen_refs:
-                return {"$ref": ref}
+            ref = node["$ref"]
+            if not isinstance(ref, str) or not ref.startswith("#") or ref in seen_refs:
+                return {"$ref": ref} if isinstance(ref, str) else node
             try:
                 target = _resolve_pointer(root, ref[1:])
             except (KeyError, IndexError, ValueError):

@@ -356,7 +356,11 @@ class RefResolver:
             node, hops = work.pop()
             if isinstance(node, dict):
                 if "$ref" in node:
-                    ref: str = node["$ref"]
+                    ref = node["$ref"]
+                    if not isinstance(ref, str):
+                        for v in node.values():
+                            work.append((v, hops))
+                        continue
                     if not ref.startswith("#"):
                         url_part = ref.split("#")[0]
                         absolute = (
