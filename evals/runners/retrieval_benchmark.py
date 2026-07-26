@@ -42,7 +42,18 @@ from fetch.infrastructure.db.repositories import (
 )
 from fetch.infrastructure.db.session import get_session, init_db
 from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
+from fetch.infrastructure.llm.ollama import OllamaEmbeddingProvider
 from fetch.infrastructure.qdrant.repository import QdrantRepository
+
+
+def _build_embedding_provider(settings: Any) -> Any:
+    if settings.embeddings.provider == "ollama":
+        return OllamaEmbeddingProvider(base_url=settings.embeddings.ollama_base_url)
+    return NvidiaNimProvider(
+        api_key=settings.llm.api_key.get_secret_value(),
+        base_url=settings.llm.base_url,
+        timeout_seconds=settings.llm.timeout_seconds,
+    )
 
 
 def _build_retrieval_config(mode: str, settings: Any, embedding_profile_version: str = "v1") -> RetrievalConfig:
@@ -88,6 +99,7 @@ async def run_eval(
         base_url=settings.llm.base_url,
         timeout_seconds=settings.llm.timeout_seconds,
     )
+    embedding_provider = _build_embedding_provider(settings)
     qdrant = QdrantRepository()
 
     results: list[dict[str, Any]] = []
@@ -105,7 +117,7 @@ async def run_eval(
             schema_repo=schema_repo,
             chunk_repo=chunk_repo,
         )
-        dense_retriever = DenseRetriever(embedding_provider=nim, qdrant=qdrant)
+        dense_retriever = DenseRetriever(embedding_provider=embedding_provider, qdrant=qdrant)
         bm25_retriever = BM25Retriever(qdrant=qdrant)
         fusion = RRFFusion()
         reranker = RetrievalReranker(rerank_provider=nim)

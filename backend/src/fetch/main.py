@@ -45,7 +45,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
     else:
         app.state.embedding_provider = llm_provider
-    yield
+    async with mcp_server.session_manager.run():
+        yield
     if hasattr(app.state, "llm_provider"):
         await app.state.llm_provider.aclose()
     await close_db()

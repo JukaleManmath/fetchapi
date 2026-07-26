@@ -55,6 +55,7 @@ from fetch.infrastructure.db.repositories import (
     PgVersionDiffRepository,
 )
 from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
+from fetch.infrastructure.llm.ollama import OllamaEmbeddingProvider
 from fetch.infrastructure.qdrant.repository import QdrantRepository
 
 
@@ -65,6 +66,13 @@ def _get_llm_provider() -> NvidiaNimProvider:
         base_url=settings.llm.base_url,
         timeout_seconds=settings.llm.timeout_seconds,
     )
+
+
+def _get_embedding_provider(llm_provider: NvidiaNimProvider) -> NvidiaNimProvider | OllamaEmbeddingProvider:
+    settings = get_settings()
+    if settings.embeddings.provider == "ollama":
+        return OllamaEmbeddingProvider(base_url=settings.embeddings.ollama_base_url)
+    return llm_provider
 
 
 def get_source_repo(session: AsyncSession) -> PgSourceRepository:
@@ -87,10 +95,13 @@ def get_auth_scheme_repo(session: AsyncSession) -> PgAuthSchemeRepository:
     return PgAuthSchemeRepository(session)
 
 
-def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
+async def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
     """Return a bundle with QueryService and its dependencies."""
+    from sqlalchemy import text as sa_text
+
     settings = get_settings()
     llm_provider = _get_llm_provider()
+    embedding_provider = _get_embedding_provider(llm_provider)
     qdrant = QdrantRepository()
 
     chunk_repo = PgChunkRepository(session)
@@ -99,18 +110,31 @@ def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
     schema_repo = PgSchemaRepository(session)
     query_run_repo = PgQueryRunRepository(session)
 
+    # Resolve embedding profile UUID (same logic as HTTP queries endpoint)
+    row = await session.execute(
+        sa_text("SELECT id FROM embedding_profiles WHERE dense_model_id = :model ORDER BY created_at LIMIT 1"),
+        {"model": settings.embeddings.model_id},
+    )
+    profile_row = row.fetchone()
+    embedding_profile_version = str(profile_row[0]) if profile_row else "v1"
+
     retrieval_config = RetrievalConfig(
         dense=DenseRetrievalConfig(
             model_id=settings.embeddings.model_id,
             top_k=settings.retrieval.dense_candidate_limit,
+            embedding_profile_version=embedding_profile_version,
         ),
-        bm25=BM25RetrievalConfig(top_k=settings.retrieval.sparse_candidate_limit),
+        bm25=BM25RetrievalConfig(
+            top_k=settings.retrieval.sparse_candidate_limit,
+            embedding_profile_version=embedding_profile_version,
+        ),
         fusion=FusionConfig(top_k=settings.retrieval.fused_candidate_limit),
         rerank=RerankConfig(
             model_id=settings.reranker.model_id,
             top_n=settings.retrieval.rerank_limit,
         ),
         expansion=ExpansionConfig(),
+        final_evidence_limit=settings.retrieval.final_evidence_limit,
     )
 
     normalizer = QueryNormalizer()
@@ -119,7 +143,7 @@ def get_query_service(session: AsyncSession) -> "QueryServiceBundle":
         schema_repo=schema_repo,
         chunk_repo=chunk_repo,
     )
-    dense_retriever = DenseRetriever(embedding_provider=llm_provider, qdrant=qdrant)
+    dense_retriever = DenseRetriever(embedding_provider=embedding_provider, qdrant=qdrant)
     bm25_retriever = BM25Retriever(qdrant=qdrant)
     fusion = RRFFusion()
     reranker = RetrievalReranker(rerank_provider=llm_provider)

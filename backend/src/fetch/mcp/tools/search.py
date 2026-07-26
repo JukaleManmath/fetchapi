@@ -37,7 +37,7 @@ async def fetch_search_docs(
             }
         revision_id = revision.id
 
-        bundle = get_query_service(session)
+        bundle = await get_query_service(session)
         svc = bundle.service
 
         answer_text = ""
