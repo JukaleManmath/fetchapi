@@ -22,6 +22,7 @@ from fetch.api.v1.validation import router as validation_router
 from fetch.config import get_settings
 from fetch.infrastructure.db.session import close_db, init_db
 from fetch.infrastructure.llm.nvidia_nim import NvidiaNimProvider
+from fetch.infrastructure.llm.ollama import OllamaEmbeddingProvider
 from fetch.infrastructure.qdrant.repository import QdrantRepository
 from fetch.mcp.server import mcp as mcp_server
 
@@ -38,6 +39,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         timeout_seconds=settings.llm.timeout_seconds,
     )
     app.state.llm_provider = llm_provider
+    if settings.embeddings.provider == "ollama":
+        app.state.embedding_provider = OllamaEmbeddingProvider(
+            base_url=settings.embeddings.ollama_base_url
+        )
+    else:
+        app.state.embedding_provider = llm_provider
     yield
     if hasattr(app.state, "llm_provider"):
         await app.state.llm_provider.aclose()

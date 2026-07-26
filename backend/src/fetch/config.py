@@ -103,10 +103,11 @@ class EmbeddingsSettings(BaseSettings):
 
     provider: str = "nvidia_nim"
     base_url: str = "https://integrate.api.nvidia.com/v1"
-    api_key: SecretStr
+    api_key: SecretStr = SecretStr("")  # not required when provider=ollama
     model_id: str = "nvidia/nv-embed-v2"
     dimension: int = 4096
     batch_size: int = 32
+    ollama_base_url: str = "http://host.docker.internal:11434"
 
 
 class RerankerSettings(BaseSettings):

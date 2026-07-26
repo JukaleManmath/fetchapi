@@ -144,7 +144,8 @@ async def stream_query(
                     schema_repo=schema_repo,
                     chunk_repo=chunk_repo,
                 )
-                dense_retriever = DenseRetriever(embedding_provider=nim, qdrant=qdrant)
+                embedding_provider = getattr(request.app.state, "embedding_provider", nim)
+                dense_retriever = DenseRetriever(embedding_provider=embedding_provider, qdrant=qdrant)
                 bm25_retriever = BM25Retriever(qdrant=qdrant)
                 fusion = RRFFusion()
                 reranker = RetrievalReranker(rerank_provider=nim)

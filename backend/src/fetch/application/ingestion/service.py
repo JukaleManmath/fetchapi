@@ -23,6 +23,7 @@ from fetch.config import Settings, get_settings
 from fetch.domain.entities import Chunk
 from fetch.domain.enums import IngestionStage, RevisionStatus
 from fetch.domain.errors import IngestionError
+from fetch.domain.protocols import EmbeddingProvider
 from fetch.infrastructure.db.repositories import (
     PgAuthSchemeRepository,
     PgChunkRepository,
@@ -424,6 +425,17 @@ async def _run_pipeline(
     )
 
 
+def _make_embedding_provider(settings: Settings) -> EmbeddingProvider:
+    """Instantiate the configured embedding provider."""
+    if settings.embeddings.provider == "ollama":
+        from fetch.infrastructure.llm.ollama import OllamaEmbeddingProvider
+        return OllamaEmbeddingProvider(base_url=settings.embeddings.ollama_base_url)
+    return NvidiaNimProvider(
+        api_key=settings.embeddings.api_key.get_secret_value(),
+        base_url=settings.embeddings.base_url,
+    )
+
+
 async def _embed_in_batches(
     texts: list[str],
     profile: EmbeddingProfile,
@@ -434,10 +446,7 @@ async def _embed_in_batches(
     Returns a flat list of dense vectors in the same order as texts.
     CPU-bound reranking is excluded here — this is I/O-bound embedding only.
     """
-    provider = NvidiaNimProvider(
-        api_key=settings.embeddings.api_key.get_secret_value(),
-        base_url=settings.embeddings.base_url,
-    )
+    provider = _make_embedding_provider(settings)
     batch_size: int = settings.embeddings.batch_size
     all_vectors: list[list[float]] = []
 
