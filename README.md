@@ -61,10 +61,10 @@ No cloud, no subscription, no pasted docs. Runs entirely in Docker.
 
 ## Quick Start
 
-**Prerequisites:** Docker and an API key for an OpenAI-compatible LLM/embeddings provider ([NVIDIA NIM](https://build.nvidia.com/) free tier works).
+**Prerequisites:** Docker and an API key for any OpenAI-compatible LLM and embeddings provider (OpenAI, Ollama, or any compatible endpoint).
 
 ```bash
-git clone https://github.com/your-username/fetchapi.git
+git clone https://github.com/JukaleManmath/fetchapi.git
 cd fetchapi
 cp .env.example .env
 # Set LLM_API_KEY, EMBEDDINGS_API_KEY, RERANKER_API_KEY in .env
@@ -176,6 +176,7 @@ Base URL: `http://localhost:8000` · Docs: [`/docs`](http://localhost:8000/docs)
 | `GET` | `/v1/sources` | List all sources |
 | `GET` | `/v1/sources/{id}` | Get source with active revision |
 | `GET` | `/v1/jobs/{id}` | Poll ingestion job status |
+| `GET` | `/v1/jobs/{id}/logs` | Stream structured logs for a job |
 | `POST` | `/v1/jobs/{id}/cancel` | Cancel an in-progress ingestion |
 | `DELETE` | `/v1/sources/{id}` | Delete a source and all its data |
 
@@ -253,7 +254,7 @@ QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING
 | **VALIDATING** | OpenAPI 3.0/3.1 schema validation via `openapi-spec-validator` |
 | **NORMALIZING** | Extract canonical entities: operations, schemas, auth schemes, servers, examples, error definitions |
 | **CHUNKING** | Build self-contained text projections per entity; save chunks and typed relations to PostgreSQL |
-| **EMBEDDING** | Batch-embed all chunks via the configured embeddings provider (default: NVIDIA NIM, 1024-dim) |
+| **EMBEDDING** | Batch-embed all chunks via the configured embeddings provider |
 | **INDEXING** | Upsert into Qdrant with deterministic point IDs; BM25 text index on the `text` payload field |
 | **VERIFYING** | Point count in Qdrant must match expected chunk count before activation |
 | **ACTIVE** | Atomic revision activation - previous revision marked SUPERSEDED in the same transaction |
@@ -302,7 +303,7 @@ python evals/runners/ablation_runner.py --source-id <id>
 | Abstention accuracy | **0.87** | ≥ 0.85 |
 | Groundedness | **0.72** | ≥ 0.70 |
 
-Reranking is disabled by default (`RERANK_LIMIT=0`). Set `RERANK_LIMIT=10` with a compatible reranker endpoint to enable the cross-encoder stage.
+Reranking is disabled by default (`RERANK_LIMIT=0`). Set `RERANK_LIMIT=10` and configure a reranker endpoint to enable the cross-encoder stage.
 
 ---
 
@@ -311,9 +312,9 @@ Reranking is disabled by default (`RERANK_LIMIT=0`). Set `RERANK_LIMIT=10` with 
 All configuration via environment variables. Copy `.env.example` to `.env`.
 
 <details>
-<summary><strong>Using a different LLM provider</strong></summary>
+<summary><strong>Supported LLM providers</strong></summary>
 
-FetchAPI defaults to NVIDIA NIM but works with any OpenAI-compatible provider:
+FetchAPI works with any OpenAI-compatible provider. Set three variables to swap:
 
 ```env
 # OpenAI
@@ -321,13 +322,18 @@ LLM_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=sk-...
 LLM_MODEL_ID=gpt-4o
 
-# Ollama (local)
+# Ollama (local, no API key needed)
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_API_KEY=ollama
 LLM_MODEL_ID=llama3.1:70b
+
+# Any OpenAI-compatible endpoint
+LLM_BASE_URL=https://your-provider/v1
+LLM_API_KEY=your-key
+LLM_MODEL_ID=your-model-id
 ```
 
-The same swap applies to embeddings via `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_API_KEY`, `EMBEDDINGS_MODEL_ID`. No code changes required.
+The same swap applies to embeddings via `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_API_KEY`, `EMBEDDINGS_MODEL_ID`, and `EMBEDDINGS_DIMENSION`. No code changes required.
 
 </details>
 
@@ -335,21 +341,21 @@ The same swap applies to embeddings via `EMBEDDINGS_BASE_URL`, `EMBEDDINGS_API_K
 <summary><strong>Key environment variables</strong></summary>
 
 ```env
-# LLM
-LLM_BASE_URL=https://integrate.api.nvidia.com/v1
+# LLM (any OpenAI-compatible endpoint)
+LLM_BASE_URL=https://your-llm-provider/v1
 LLM_API_KEY=your-key
-LLM_MODEL_ID=meta/llama-3.1-70b-instruct
+LLM_MODEL_ID=your-model-id
 
 # Embeddings
-EMBEDDINGS_BASE_URL=https://integrate.api.nvidia.com/v1
-EMBEDDINGS_API_KEY=your-key
-EMBEDDINGS_MODEL_ID=nvidia/nv-embedqa-e5-v5
+EMBEDDINGS_PROVIDER=ollama          # or any openai-compatible provider
+EMBEDDINGS_MODEL_ID=mxbai-embed-large
 EMBEDDINGS_DIMENSION=1024
+EMBEDDINGS_BATCH_SIZE=32
 
-# Reranker
-RERANKER_BASE_URL=https://integrate.api.nvidia.com/v1
+# Reranker (optional - disabled by default)
+RERANKER_BASE_URL=https://your-reranker-provider/v1
 RERANKER_API_KEY=your-key
-RERANKER_MODEL_ID=nvidia/nv-rerankqa-mistral-4b-v3
+RERANKER_MODEL_ID=your-reranker-model-id
 
 # Ingestion limits
 WORKER_INGESTION_MAX_ALIASES=100
@@ -359,6 +365,10 @@ WORKER_INGESTION_MAX_RETRIES=3
 EXT_REF_MAX_HOPS=3
 EXT_REF_MAX_BYTES=1048576
 EXT_REF_TIMEOUT_SECONDS=10
+
+# Retrieval tuning
+RERANK_LIMIT=0          # 0 = disabled; set to 10 to enable cross-encoder reranking
+FINAL_EVIDENCE_LIMIT=6  # max evidence chunks passed to LLM
 ```
 
 See [`.env.example`](.env.example) for the full list.
@@ -438,7 +448,7 @@ fetchapi/
 - File and URL ingestion only - no HTML documentation crawling or PDF support
 - Single workspace, single tenant - no multi-user access control
 - Generated code is syntax-validated against the spec, not executed or runtime-tested
-- Cross-encoder reranking disabled by default - requires a paid NIM tier or self-hosted endpoint
+- Cross-encoder reranking disabled by default (`RERANK_LIMIT=0`) - set `RERANK_LIMIT=10` and configure a reranker endpoint to enable it
 
 ---
 
