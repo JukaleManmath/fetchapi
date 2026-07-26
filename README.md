@@ -343,13 +343,13 @@ python evals/runners/ablation_runner.py
 
 The 90-question eval dataset (30 each for Petstore, Stripe, and GitHub; 5 abstention questions per set) is in `evals/datasets/`. Regression thresholds are in `evals/thresholds.json`.
 
-**Retrieval benchmark** — hybrid mode (dense + BM25 + RRF), measured on Petstore (19 ops, 25 non-abstention questions)
+**Retrieval benchmark** — hybrid mode (dense + BM25 + RRF), measured on 25 non-abstention questions per dataset
 
 | Dataset | Recall@5 | Recall@10 | MRR | Target |
 |---|---|---|---|---|
 | Petstore | **1.00** | **1.00** | **0.96** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
 | Stripe | **0.84** | **0.84** | **0.81** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
-| GitHub | — | — | — | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
+| GitHub | **0.84** | **0.84** | **0.74** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
 
 **Answer benchmark** — measured on Petstore (30 questions, 5 abstention)
 
