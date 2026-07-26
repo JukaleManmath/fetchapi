@@ -1,7 +1,7 @@
 """Seed the default single-tenant workspace.
 
 The default workspace ID matches AppSettings.workspace_id so that the
-Phase 1–2 hardcoded single-tenant path satisfies the FK constraint on
+Phase 1-2 hardcoded single-tenant path satisfies the FK constraint on
 api_sources.workspace_id.
 
 Revision ID: 9c1d4a7e3b82

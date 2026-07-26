@@ -21,12 +21,14 @@ from uuid import UUID, uuid4
 from fetch.config import get_settings
 from fetch.domain.entities import ApiSource, IngestionJob, SourceRevision
 from fetch.domain.enums import IngestionStage, RevisionStatus, SourceType
+from fetch.domain.errors import SourceNotFoundError
 from fetch.infrastructure.db.repositories import (
     PgJobRepository,
     PgRevisionRepository,
     PgSourceRepository,
 )
 from fetch.infrastructure.db.session import get_session
+from fetch.infrastructure.qdrant.repository import QdrantRepository
 from fetch.infrastructure.storage.minio import MinioStorageProvider
 
 logger = logging.getLogger(__name__)
@@ -231,3 +233,45 @@ class CreateSourceService:
             # For idempotency across re-uploads we search by hash in workspace.
             # In Phase 1 we keep it simple: same source_id means same logical source.
             return await rev_repo.get_by_content_hash(source_id, content_hash)
+
+
+class DeleteSourceService:
+    """Cancels any running ingestion, removes Qdrant vectors, then deletes the source."""
+
+    def __init__(self, workspace_id: UUID) -> None:
+        self._workspace_id = workspace_id
+
+    async def delete(self, source_id: UUID) -> None:
+        from fetch.application.ingestion.service import cancel_task
+
+        async with get_session() as session:
+            source_repo = PgSourceRepository(session)
+            job_repo = PgJobRepository(session)
+            rev_repo = PgRevisionRepository(session)
+
+            source = await source_repo.get(source_id)
+            if source is None or source.workspace_id != self._workspace_id:
+                raise SourceNotFoundError(source_id)
+
+            # Cancel any in-flight ingestion tasks
+            active_jobs = await job_repo.list_active_by_source(source_id)
+            for job in active_jobs:
+                cancel_task(job.id)
+                logger.info(
+                    "ingestion_cancelled_for_delete",
+                    extra={"job_id": str(job.id), "source_id": str(source_id)},
+                )
+
+            # Remove vectors from Qdrant for every revision
+            revisions = await rev_repo.list_by_source(source_id)
+            qdrant = QdrantRepository()
+            for revision in revisions:
+                await qdrant.delete_by_revision(revision.id, self._workspace_id)
+
+            # Delete source — FK CASCADE removes revisions, jobs, chunks, etc.
+            await source_repo.delete(source_id)
+
+        logger.info(
+            "source_deleted",
+            extra={"source_id": str(source_id), "workspace_id": str(self._workspace_id)},
+        )
