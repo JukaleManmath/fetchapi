@@ -1,0 +1,11 @@
+{
+  "dataset": "evals/datasets/stripe.json",
+  "source_id": "b697d7ef-ee45-4299-a97a-21ed61aaeee7",
+  "mode": "hybrid",
+  "metrics": {
+    "recall_at_5": 0.84,
+    "recall_at_10": 0.84,
+    "mrr": 0.8133,
+    "total_questions": 25
+  }
+}

@@ -348,7 +348,7 @@ The 90-question eval dataset (30 each for Petstore, Stripe, and GitHub; 5 absten
 | Dataset | Recall@5 | Recall@10 | MRR | Target |
 |---|---|---|---|---|
 | Petstore | **1.00** | **1.00** | **0.96** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
-| Stripe | — | — | — | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
+| Stripe | **0.84** | **0.84** | **0.81** | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
 | GitHub | — | — | — | ≥ 0.70 / ≥ 0.80 / ≥ 0.60 |
 
 **Answer benchmark** — measured on Petstore (30 questions, 5 abstention)
