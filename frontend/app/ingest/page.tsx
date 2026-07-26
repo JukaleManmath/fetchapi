@@ -1,13 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { IngestForm, JobTracker } from "@/features/ingest/ingest-form";
+import { getJob } from "@/lib/api";
 import type { IngestionJob } from "@/lib/types";
+
+const SESSION_KEY = "fetchapi_active_job";
 
 export default function IngestPage() {
   const router = useRouter();
   const [job, setJob] = useState<IngestionJob | null>(null);
+
+  // Restore in-progress job from sessionStorage on mount
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (!stored) return;
+    const { jobId } = JSON.parse(stored) as { jobId: string };
+    getJob(jobId)
+      .then((j) => {
+        if (j.stage !== "ACTIVE" && j.stage !== "FAILED") {
+          setJob(j);
+        } else {
+          sessionStorage.removeItem(SESSION_KEY);
+        }
+      })
+      .catch(() => sessionStorage.removeItem(SESSION_KEY));
+  }, []);
+
+  function handleJobCreated(j: IngestionJob) {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ jobId: j.id }));
+    setJob(j);
+  }
+
+  function handleReset() {
+    sessionStorage.removeItem(SESSION_KEY);
+    setJob(null);
+  }
 
   return (
     <div className="relative min-h-full flex flex-col items-center justify-center px-6 py-16 dot-grid">
@@ -37,11 +66,11 @@ export default function IngestPage() {
             {job ? (
               <JobTracker
                 job={job}
-                onReset={() => setJob(null)}
+                onReset={handleReset}
                 onView={() => router.push(`/sources/${job.source_id}`)}
               />
             ) : (
-              <IngestForm onJobCreated={setJob} />
+              <IngestForm onJobCreated={handleJobCreated} />
             )}
           </div>
         </div>

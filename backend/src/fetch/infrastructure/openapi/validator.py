@@ -16,11 +16,12 @@ External ref protections (from config):
 SSRF blocked ranges: loopback, private, link-local, multicast, cloud metadata.
 """
 
+import asyncio
 import ipaddress
 import json
 import logging
 import socket
-import sys
+import threading
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -338,31 +339,62 @@ class RefResolver:
         )
         self._external_cache[url] = doc
 
-    async def prefetch_external_refs(self, node: Any = None, hops: int = 0) -> None:
-        """Walk the document and pre-fetch all external $refs before synchronous resolution."""
-        if node is None:
-            node = self._root
-        if isinstance(node, dict):
-            if "$ref" in node:
-                ref: str = node["$ref"]
-                if not ref.startswith("#"):
-                    url_part = ref.split("#")[0]
-                    absolute = (
-                        urljoin(self._base_url, url_part)
-                        if self._base_url
-                        else url_part
-                    )
-                    await self._fetch_and_cache(absolute, hops)
-                    # Recurse into the fetched doc to find nested external refs
-                    await self.prefetch_external_refs(
-                        self._external_cache.get(absolute, {}), hops + 1
-                    )
-            else:
-                for v in node.values():
-                    await self.prefetch_external_refs(v, hops)
-        elif isinstance(node, list):
-            for item in node:
-                await self.prefetch_external_refs(item, hops)
+    async def prefetch_external_refs(self) -> None:
+        """Walk the document and pre-fetch all external $refs before synchronous resolution.
+
+        Uses an explicit work-stack (iterative, not recursive) to avoid C-stack
+        overflow on deeply nested specs such as Stripe.
+        """
+        work: list[tuple[Any, int]] = [(self._root, 0)]
+        while work:
+            node, hops = work.pop()
+            if isinstance(node, dict):
+                if "$ref" in node:
+                    ref: str = node["$ref"]
+                    if not ref.startswith("#"):
+                        url_part = ref.split("#")[0]
+                        absolute = (
+                            urljoin(self._base_url, url_part)
+                            if self._base_url
+                            else url_part
+                        )
+                        if absolute not in self._external_cache:
+                            await self._fetch_and_cache(absolute, hops)
+                            fetched = self._external_cache.get(absolute, {})
+                            work.append((fetched, hops + 1))
+                else:
+                    for v in node.values():
+                        work.append((v, hops))
+            elif isinstance(node, list):
+                for item in node:
+                    work.append((item, hops))
+
+
+async def _resolve_with_large_stack(resolver: RefResolver) -> dict[str, Any]:
+    """Run resolver.resolve() in a dedicated thread with a 64 MB C-stack.
+
+    Python's default thread stack (8 MB on Linux) overflows with SIGSEGV when
+    resolving deeply nested specs like Stripe.  A 64 MB stack gives ample
+    headroom without risking OOM on containers with multiple GB of RAM.
+    """
+    loop = asyncio.get_running_loop()
+    future: asyncio.Future[dict[str, Any]] = loop.create_future()
+
+    def _worker() -> None:
+        try:
+            result = resolver.resolve()
+            loop.call_soon_threadsafe(future.set_result, result)
+        except Exception as exc:  # noqa: BLE001
+            loop.call_soon_threadsafe(future.set_exception, exc)
+
+    old_size = threading.stack_size(64 * 1024 * 1024)
+    try:
+        t = threading.Thread(target=_worker, daemon=True)
+        t.start()
+    finally:
+        threading.stack_size(old_size or 0)
+
+    return await future
 
 
 async def load_and_resolve(
@@ -381,14 +413,5 @@ async def load_and_resolve(
 
     resolver = RefResolver(doc, base_url=source_url)
     await resolver.prefetch_external_refs()
-    # Large specs (e.g. GitHub GHES, 10 MB+) have deeply nested $ref chains
-    # that exceed Python's default 1000-frame limit. Raise it for this call
-    # only — safe because ingestion runs in a single-threaded asyncio task.
-    _prev_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(max(_prev_limit, 10_000))
-    try:
-        resolved = resolver.resolve()
-    finally:
-        sys.setrecursionlimit(_prev_limit)
-
+    resolved = await _resolve_with_large_stack(resolver)
     return resolved, version

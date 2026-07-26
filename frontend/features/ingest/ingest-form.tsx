@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, type ChangeEvent, type FormEvent } from "react";
+import { useState, useRef, useEffect, type ChangeEvent, type FormEvent } from "react";
 import { Upload, Link2, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { getJob } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -202,10 +203,27 @@ interface JobTrackerProps {
   onView: () => void;
 }
 
-export function JobTracker({ job, onReset, onView }: JobTrackerProps) {
-  const currentIndex = STAGES.indexOf(job.stage as (typeof STAGES)[number]);
+export function JobTracker({ job: initialJob, onReset, onView }: JobTrackerProps) {
+  const [job, setJob] = useState(initialJob);
+
   const isFailed = job.stage === "FAILED";
   const isDone = job.stage === "ACTIVE";
+
+  // Poll every 3s while ingestion is in progress
+  useEffect(() => {
+    if (isDone || isFailed) return;
+    const interval = setInterval(async () => {
+      try {
+        const updated = await getJob(job.id);
+        setJob(updated);
+      } catch {
+        // ignore transient errors
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isDone, isFailed, job.id]);
+
+  const currentIndex = STAGES.indexOf(job.stage as (typeof STAGES)[number]);
 
   return (
     <div className="space-y-8">

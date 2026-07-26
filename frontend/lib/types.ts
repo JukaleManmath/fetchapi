@@ -18,6 +18,7 @@ export interface Source {
   name: string;
   created_at: string;
   active_revision_id: string | null;
+  ingestion_stage: string | null;
 }
 
 export interface SourceRevision {

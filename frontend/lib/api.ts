@@ -35,6 +35,7 @@ function normaliseSource(raw: Record<string, unknown>): Source {
     name: raw.name as string,
     created_at: raw.created_at as string,
     active_revision_id: (raw.active_revision_id as string | null) ?? null,
+    ingestion_stage: (raw.ingestion_stage as string | null) ?? null,
   };
 }
 
