@@ -70,7 +70,11 @@ async def test_fetch_search_docs_returns_dict() -> None:
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
+    mock_settings = MagicMock()
+    mock_settings.app.workspace_id = uuid4()
+
     with (
+        patch("fetch.mcp.tools.search.get_settings", return_value=mock_settings),
         patch("fetch.mcp.tools.search.get_session", return_value=mock_session),
         patch(
             "fetch.mcp.tools.search.PgRevisionRepository",

@@ -72,7 +72,7 @@ class TestDefaultValues:
         assert s.retrieval.dense_candidate_limit == 25
         assert s.retrieval.sparse_candidate_limit == 25
         assert s.retrieval.fused_candidate_limit == 30
-        assert s.retrieval.rerank_limit == 10
+        assert s.retrieval.rerank_limit == 0
         assert s.retrieval.final_evidence_limit == 6
         assert s.retrieval.max_evidence_tokens == 6000
 

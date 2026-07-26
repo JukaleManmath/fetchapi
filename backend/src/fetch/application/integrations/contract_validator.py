@@ -56,9 +56,9 @@ class ContractValidator:
                         ):
                             issues.append(
                                 ValidationIssue(
-                                    severity="warning",
+                                    severity="error",
                                     category="contract",
-                                    message="Bearer Authorization header not found in generated code — may be handled by SDK",
+                                    message="Bearer Authorization header not found in generated code",
                                     field="Authorization header",
                                 )
                             )

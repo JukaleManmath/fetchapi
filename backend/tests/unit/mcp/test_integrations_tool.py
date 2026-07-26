@@ -135,7 +135,11 @@ async def test_fetch_generate_integration_returns_code() -> None:
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
+    mock_settings = MagicMock()
+    mock_settings.app.workspace_id = source.workspace_id
+
     with (
+        patch("fetch.mcp.tools.integrations.get_settings", return_value=mock_settings),
         patch("fetch.mcp.tools.integrations.get_session", return_value=mock_session),
         patch(
             "fetch.mcp.tools.integrations.PgOperationRepository",

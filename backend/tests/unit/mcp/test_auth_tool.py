@@ -12,12 +12,13 @@ from fetch.domain.entities import ApiSource, AuthScheme, SourceRevision
 from fetch.domain.enums import AuthSchemeType, RevisionStatus, SourceType
 
 
-def _make_source() -> ApiSource:
-    from fetch.config import get_settings
+_WORKSPACE_ID = uuid4()
 
+
+def _make_source() -> ApiSource:
     return ApiSource(
         id=uuid4(),
-        workspace_id=get_settings().app.workspace_id,
+        workspace_id=_WORKSPACE_ID,
         name="Test API",
         source_type=SourceType.OPENAPI_URL,
         config_url="https://example.com/openapi.yaml",
@@ -81,7 +82,11 @@ async def test_fetch_get_auth_returns_auth_schemes() -> None:
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
+    mock_settings = MagicMock()
+    mock_settings.app.workspace_id = _WORKSPACE_ID
+
     with (
+        patch("fetch.mcp.tools.auth.get_settings", return_value=mock_settings),
         patch("fetch.mcp.tools.auth.get_session", return_value=mock_session),
         patch(
             "fetch.mcp.tools.auth.PgSourceRepository",

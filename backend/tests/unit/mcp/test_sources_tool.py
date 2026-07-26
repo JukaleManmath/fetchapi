@@ -61,7 +61,11 @@ async def test_fetch_list_sources_returns_dict() -> None:
     mock_session.__aenter__ = AsyncMock(return_value=mock_session)
     mock_session.__aexit__ = AsyncMock(return_value=None)
 
+    mock_settings = MagicMock()
+    mock_settings.app.workspace_id = source.workspace_id
+
     with (
+        patch("fetch.mcp.tools.sources.get_settings", return_value=mock_settings),
         patch(
             "fetch.mcp.tools.sources.get_session",
             return_value=mock_session,
