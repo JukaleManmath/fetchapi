@@ -10,34 +10,40 @@ const SESSION_KEY = "fetchapi_active_job";
 
 export default function IngestPage() {
   const router = useRouter();
-  // Initialise from sessionStorage synchronously to avoid flash of empty form
-  const [job, setJob] = useState<IngestionJob | null>(() => {
-    if (typeof window === "undefined") return null;
-    const stored = sessionStorage.getItem(SESSION_KEY);
-    if (!stored) return null;
-    try {
-      return JSON.parse(stored) as IngestionJob;
-    } catch {
-      return null;
-    }
-  });
+  const [job, setJob] = useState<IngestionJob | null>(null);
+  const [ready, setReady] = useState(false);
 
-  // Refresh job state from API on mount (sessionStorage may be stale)
+  // On mount: restore from sessionStorage and refresh from API
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
-    if (!stored) return;
-    const cached = JSON.parse(stored) as IngestionJob;
+    if (!stored) {
+      setReady(true);
+      return;
+    }
+    let cached: IngestionJob;
+    try {
+      cached = JSON.parse(stored) as IngestionJob;
+    } catch {
+      sessionStorage.removeItem(SESSION_KEY);
+      setReady(true);
+      return;
+    }
+    // Show cached state immediately while we verify with the API
+    setJob(cached);
     getJob(cached.id)
       .then((j) => {
         if (j.stage === "ACTIVE" || j.stage === "FAILED") {
           sessionStorage.removeItem(SESSION_KEY);
+        } else {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(j));
         }
         setJob(j);
       })
       .catch(() => {
         sessionStorage.removeItem(SESSION_KEY);
         setJob(null);
-      });
+      })
+      .finally(() => setReady(true));
   }, []);
 
   function handleJobCreated(j: IngestionJob) {
@@ -75,7 +81,11 @@ export default function IngestPage() {
         {/* Card */}
         <div className="bg-canvas border border-border-2 rounded-2xl shadow-card-lg overflow-hidden">
           <div className="px-8 py-8">
-            {job ? (
+            {!ready ? (
+              <div className="flex items-center justify-center h-32">
+                <span className="w-5 h-5 border-2 border-ink border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : job ? (
               <JobTracker
                 job={job}
                 onReset={handleReset}
