@@ -9,9 +9,14 @@ export type RevisionStatus =
   | "PARSING"
   | "VALIDATING"
   | "NORMALIZING"
+  | "CHUNKING"
+  | "EMBEDDING"
+  | "INDEXING"
+  | "VERIFYING"
   | "ACTIVE"
   | "SUPERSEDED"
-  | "FAILED";
+  | "FAILED"
+  | "CANCELLED";
 
 export interface Source {
   id: string;
