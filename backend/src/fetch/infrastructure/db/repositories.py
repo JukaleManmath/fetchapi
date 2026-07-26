@@ -34,6 +34,7 @@ from fetch.domain.entities import (
     ErrorStatusMatch,
     IngestionJob,
     IntegrationRun,
+    JobLog,
     ParsedRequest,
     QueryRun,
     RequestDiagnostic,
@@ -73,6 +74,7 @@ from fetch.infrastructure.db.models import (
     ErrorDefinitionModel,
     IngestionJobModel,
     IntegrationRunModel,
+    JobLogModel,
     QueryRunModel,
     RequestDiagnosticRunModel,
     SourceRevisionModel,
@@ -171,6 +173,11 @@ class PgSourceRepository:
             row.config_object_key = source.config_object_key
             row.updated_at = source.updated_at
 
+    async def delete(self, source_id: UUID) -> None:
+        row = await self._session.get(ApiSourceModel, source_id)
+        if row is not None:
+            await self._session.delete(row)
+
 
 # ── RevisionRepository ────────────────────────────────────────────────────────
 
@@ -239,6 +246,14 @@ class PgRevisionRepository:
             row.failed_at = revision.failed_at
             row.failure_reason = revision.failure_reason
 
+    async def list_by_source(self, source_id: UUID) -> list[SourceRevision]:
+        result = await self._session.execute(
+            select(SourceRevisionModel).where(
+                SourceRevisionModel.source_id == source_id
+            )
+        )
+        return [_map_revision(r) for r in result.scalars().all()]
+
     async def activate(self, revision_id: UUID) -> None:
         """Atomically set revision ACTIVE and supersede all others for the same source.
 
@@ -298,6 +313,21 @@ class PgJobRepository:
         )
         row = result.scalar_one_or_none()
         return _map_job(row) if row else None
+
+    async def list_active_by_source(self, source_id: UUID) -> list[IngestionJob]:
+        """Return all non-terminal jobs for the given source."""
+        terminal = {
+            IngestionStage.ACTIVE.value,
+            IngestionStage.FAILED.value,
+            IngestionStage.CANCELLED.value,
+        }
+        result = await self._session.execute(
+            select(IngestionJobModel).where(
+                IngestionJobModel.source_id == source_id,
+                IngestionJobModel.stage.notin_(terminal),
+            )
+        )
+        return [_map_job(r) for r in result.scalars().all()]
 
     async def save(self, job: IngestionJob) -> None:
         row = await self._session.get(IngestionJobModel, job.id)
@@ -1602,3 +1632,42 @@ class PgDiagnosticRunRepository:
             .limit(limit)
         )
         return [_map_diagnostic_run(r) for r in result.scalars().all()]
+
+
+# ── JobLogRepository ──────────────────────────────────────────────────────────
+
+
+def _map_job_log(row: JobLogModel) -> JobLog:
+    return JobLog(
+        id=row.id,
+        job_id=row.job_id,
+        created_at=row.created_at,
+        stage=row.stage,
+        level=row.level,
+        message=row.message,
+    )
+
+
+class PgJobLogRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def save(self, log: JobLog) -> None:
+        self._session.add(
+            JobLogModel(
+                id=log.id,
+                job_id=log.job_id,
+                created_at=log.created_at,
+                stage=log.stage,
+                level=log.level,
+                message=log.message,
+            )
+        )
+
+    async def list_by_job(self, job_id: UUID) -> list[JobLog]:
+        result = await self._session.execute(
+            select(JobLogModel)
+            .where(JobLogModel.job_id == job_id)
+            .order_by(JobLogModel.created_at.asc())
+        )
+        return [_map_job_log(r) for r in result.scalars().all()]

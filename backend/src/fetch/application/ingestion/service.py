@@ -16,12 +16,12 @@ import asyncio
 import hashlib
 import logging
 from datetime import UTC, datetime
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 
 from fetch.config import Settings, get_settings
-from fetch.domain.entities import Chunk
+from fetch.domain.entities import Chunk, JobLog
 from fetch.domain.enums import IngestionStage, RevisionStatus
 from fetch.domain.errors import IngestionError
 from fetch.domain.protocols import EmbeddingProvider
@@ -30,6 +30,7 @@ from fetch.infrastructure.db.repositories import (
     PgChunkRepository,
     PgErrorRepository,
     PgExampleRepository,
+    PgJobLogRepository,
     PgJobRepository,
     PgOperationRepository,
     PgRevisionRepository,
@@ -107,6 +108,40 @@ async def _update_job_stage(
         await repo.save(job)
 
 
+_STAGE_MESSAGES: dict[IngestionStage, str] = {
+    IngestionStage.FETCHING: "Fetching source content",
+    IngestionStage.SNAPSHOTTING: "Computing content hash and storing snapshot",
+    IngestionStage.PARSING: "Parsing OpenAPI specification",
+    IngestionStage.VALIDATING: "Validating specification structure",
+    IngestionStage.NORMALIZING: "Extracting canonical API entities",
+    IngestionStage.CHUNKING: "Building text projections for retrieval",
+    IngestionStage.EMBEDDING: "Generating dense vector embeddings",
+    IngestionStage.INDEXING: "Indexing vectors into Qdrant",
+    IngestionStage.VERIFYING: "Verifying indexed point count",
+    IngestionStage.ACTIVE: "Ingestion complete — revision activated",
+}
+
+
+async def _log_stage(
+    job_id: UUID,
+    stage: IngestionStage,
+    message: str | None = None,
+    level: str = "info",
+) -> None:
+    """Append a structured log entry for the given stage transition."""
+    text = message or _STAGE_MESSAGES.get(stage, stage.value)
+    log = JobLog(
+        id=uuid4(),
+        job_id=job_id,
+        created_at=datetime.now(UTC),
+        stage=stage.value,
+        level=level,
+        message=text,
+    )
+    async with get_session() as session:
+        await PgJobLogRepository(session).save(log)
+
+
 async def run_ingestion(
     job_id: UUID,
     revision_id: UUID,
@@ -158,6 +193,7 @@ async def _mark_failed(job_id: UUID, revision_id: UUID, reason: str) -> None:
             revision.failure_reason = reason
             await rev_repo.save(revision)
     await _update_job_stage(job_id, IngestionStage.FAILED, error_message=reason)
+    await _log_stage(job_id, IngestionStage.FAILED, message=reason, level="error")
 
 
 async def _run_pipeline(
@@ -170,6 +206,7 @@ async def _run_pipeline(
 
     # ── FETCHING: load source config and get raw bytes ────────────────────────
     await _update_job_stage(job_id, IngestionStage.FETCHING)
+    await _log_stage(job_id, IngestionStage.FETCHING)
 
     async with get_session() as session:
         from fetch.infrastructure.db.repositories import PgSourceRepository
@@ -204,6 +241,7 @@ async def _run_pipeline(
 
     # ── SNAPSHOTTING: compute content hash, store snapshot ────────────────────
     await _update_job_stage(job_id, IngestionStage.SNAPSHOTTING)
+    await _log_stage(job_id, IngestionStage.SNAPSHOTTING)
 
     content_hash = hashlib.sha256(raw_content).hexdigest()
 
@@ -230,6 +268,7 @@ async def _run_pipeline(
 
     # ── PARSING: load YAML/JSON safely ───────────────────────────────────────
     await _update_job_stage(job_id, IngestionStage.PARSING)
+    await _log_stage(job_id, IngestionStage.PARSING)
 
     resolved_doc, _openapi_version = await load_and_resolve(
         raw_content,
@@ -239,12 +278,14 @@ async def _run_pipeline(
 
     # ── VALIDATING: already done inside load_and_resolve ─────────────────────
     await _update_job_stage(job_id, IngestionStage.VALIDATING)
+    await _log_stage(job_id, IngestionStage.VALIDATING)
 
     api_version = extract_api_version(resolved_doc)
     api_title = extract_api_title(resolved_doc)
 
     # ── NORMALIZING: extract canonical entities ───────────────────────────────
     await _update_job_stage(job_id, IngestionStage.NORMALIZING)
+    await _log_stage(job_id, IngestionStage.NORMALIZING)
 
     servers = extract_servers(resolved_doc, revision_id)
     auth_schemes = extract_auth_schemes(resolved_doc, revision_id, workspace_id)
@@ -290,6 +331,7 @@ async def _run_pipeline(
 
     # ── CHUNKING: build text projections from canonical entities ─────────────
     await _update_job_stage(job_id, IngestionStage.CHUNKING)
+    await _log_stage(job_id, IngestionStage.CHUNKING)
 
     async with get_session() as session:
         profile = await get_or_create_profile(session)
@@ -378,12 +420,14 @@ async def _run_pipeline(
 
     # ── EMBEDDING: generate dense vectors via provider ────────────────────────
     await _update_job_stage(job_id, IngestionStage.EMBEDDING)
+    await _log_stage(job_id, IngestionStage.EMBEDDING)
 
     texts = [c.text for c in all_chunks]
     vectors = await _embed_in_batches(texts, profile, settings)
 
     # ── INDEXING: upsert into Qdrant ──────────────────────────────────────────
     await _update_job_stage(job_id, IngestionStage.INDEXING)
+    await _log_stage(job_id, IngestionStage.INDEXING)
 
     qdrant = QdrantRepository()
     await qdrant.upsert_chunks(
@@ -397,6 +441,7 @@ async def _run_pipeline(
 
     # ── VERIFYING: confirm point count matches expected ───────────────────────
     await _update_job_stage(job_id, IngestionStage.VERIFYING)
+    await _log_stage(job_id, IngestionStage.VERIFYING)
 
     actual_count = await qdrant.count_points(revision_id, workspace_id)
 
@@ -430,6 +475,7 @@ async def _run_pipeline(
         await rev_repo.activate(revision_id)
 
     await _update_job_stage(job_id, IngestionStage.ACTIVE)
+    await _log_stage(job_id, IngestionStage.ACTIVE)
 
     logger.info(
         "ingestion_complete",

@@ -9,13 +9,14 @@ GET  /v1/jobs/{job_id}           — poll an ingestion job's current stage
 
 from uuid import UUID
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import text as sa_text
 
 from fetch.api.dependencies import get_workspace_id
-from fetch.application.sources.service import CreateSourceService
+from fetch.application.sources.service import CreateSourceService, DeleteSourceService
 from fetch.config import get_settings
+from fetch.domain.errors import SourceNotFoundError
 from fetch.infrastructure.db.repositories import (
     PgJobRepository,
     PgRevisionRepository,
@@ -37,6 +38,7 @@ class SourceResponse(BaseModel):
     active_api_title: str | None
     active_api_version: str | None
     ingestion_stage: str | None
+    latest_job_id: UUID | None
     created_at: str
 
 
@@ -162,11 +164,12 @@ async def list_sources() -> list[SourceResponse]:
                     r.id as active_revision_id,
                     r.api_title as active_api_title,
                     r.api_version as active_api_version,
-                    j.stage as ingestion_stage
+                    j.stage as ingestion_stage,
+                    j.id as latest_job_id
                 FROM api_sources s
                 LEFT JOIN source_revisions r ON r.source_id = s.id AND r.status = 'active'
                 LEFT JOIN LATERAL (
-                    SELECT stage FROM ingestion_jobs
+                    SELECT id, stage FROM ingestion_jobs
                     WHERE source_id = s.id
                     ORDER BY created_at DESC
                     LIMIT 1
@@ -187,6 +190,7 @@ async def list_sources() -> list[SourceResponse]:
             active_api_title=row["active_api_title"],
             active_api_version=row["active_api_version"],
             ingestion_stage=row["ingestion_stage"] if row["active_revision_id"] is None else None,
+            latest_job_id=row["latest_job_id"],
             created_at=row["created_at"].isoformat(),
         )
         for row in rows
@@ -214,17 +218,19 @@ async def get_source(source_id: UUID) -> SourceResponse:
         active_rev = await rev_repo.get_active(source_id)
 
         ingestion_stage: str | None = None
-        if active_rev is None:
-            row = await session.execute(
-                sa_text(
-                    "SELECT stage FROM ingestion_jobs"
-                    " WHERE source_id = :sid ORDER BY created_at DESC LIMIT 1"
-                ),
-                {"sid": str(source_id)},
-            )
-            stage_row = row.fetchone()
-            if stage_row:
-                ingestion_stage = stage_row[0]
+        latest_job_id: UUID | None = None
+        row = await session.execute(
+            sa_text(
+                "SELECT id, stage FROM ingestion_jobs"
+                " WHERE source_id = :sid ORDER BY created_at DESC LIMIT 1"
+            ),
+            {"sid": str(source_id)},
+        )
+        job_row = row.fetchone()
+        if job_row:
+            latest_job_id = job_row[0]
+            if active_rev is None:
+                ingestion_stage = job_row[1]
 
     return SourceResponse(
         source_id=source.id,
@@ -234,8 +240,27 @@ async def get_source(source_id: UUID) -> SourceResponse:
         active_api_title=active_rev.api_title if active_rev else None,
         active_api_version=active_rev.api_version if active_rev else None,
         ingestion_stage=ingestion_stage,
+        latest_job_id=latest_job_id,
         created_at=source.created_at.isoformat(),
     )
+
+
+@router.delete(
+    "/sources/{source_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a source and all its data",
+)
+async def delete_source(source_id: UUID) -> Response:
+    workspace_id = get_workspace_id()
+    svc = DeleteSourceService(workspace_id)
+    try:
+        await svc.delete(source_id)
+    except SourceNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "SOURCE_NOT_FOUND", "message": "Source not found."},
+        ) from None
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get(

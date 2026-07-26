@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from fetch.api.errors import register_error_handlers
 from fetch.api.v1.integrations import router as integrations_router
+from fetch.api.v1.jobs import router as jobs_router
 from fetch.api.v1.operations import router as operations_router
 from fetch.api.v1.queries import router as queries_router
 from fetch.api.v1.sources import router as sources_router
@@ -74,6 +75,7 @@ app.add_middleware(
 register_error_handlers(app)
 
 app.include_router(sources_router)
+app.include_router(jobs_router)
 app.include_router(operations_router)
 app.include_router(queries_router)
 app.include_router(integrations_router)

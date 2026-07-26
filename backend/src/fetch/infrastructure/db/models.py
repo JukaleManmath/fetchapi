@@ -523,6 +523,28 @@ class ChunkRelationModel(Base):
     )
 
 
+# ── Job logs ─────────────────────────────────────────────────────────────────
+
+
+class JobLogModel(Base):
+    __tablename__ = "job_logs"
+
+    id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    job_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("ingestion_jobs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    stage: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    level: Mapped[str] = mapped_column(String(20), nullable=False, default="info")
+    message: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (Index("ix_job_logs_job", "job_id"),)
+
+
 # ── Query runs ────────────────────────────────────────────────────────────────
 
 

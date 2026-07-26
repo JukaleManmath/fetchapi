@@ -349,6 +349,18 @@ class IngestionJob:
 
 
 @dataclass
+class JobLog:
+    """A single structured log entry emitted during ingestion."""
+
+    id: UUID
+    job_id: UUID
+    created_at: datetime
+    stage: str | None
+    level: str
+    message: str
+
+
+@dataclass
 class Citation:
     """A server-owned citation linking an answer claim to a source chunk."""
 
