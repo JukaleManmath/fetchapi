@@ -174,14 +174,29 @@ export async function listAuth(sourceId: string): Promise<AuthScheme[]> {
 // Integration generation
 // ---------------------------------------------------------------------------
 
-export function generateIntegration(
+export async function generateIntegration(
   operationId: string,
+  sourceId: string,
   language: string,
 ): Promise<GenerationResult> {
-  return request<GenerationResult>("/v1/integrations/generate", {
+  const raw = await request<Record<string, unknown>>("/v1/integrations/generate", {
     method: "POST",
-    body: JSON.stringify({ operation_id: operationId, language }),
+    body: JSON.stringify({ operation_id: operationId, source_id: sourceId, language }),
   });
+  // Backend returns generated_code / validation_report; normalise to GenerationResult shape.
+  const report = (raw.validation_report ?? {}) as Record<string, unknown>;
+  const issues = (report.issues ?? []) as Array<{ severity: string; category: string; message: string; field: string | null }>;
+  return {
+    code: (raw.generated_code as string) ?? "",
+    language: raw.language as string,
+    operation_id: raw.operation_id as string,
+    contract_issues: issues
+      .filter((i) => i.category === "contract")
+      .map((i) => ({ severity: i.severity as "error" | "warning" | "info", message: i.message, field: i.field ?? null })),
+    syntax_issues: issues
+      .filter((i) => i.category === "syntax")
+      .map((i) => ({ severity: i.severity as "error" | "warning" | "info", message: i.message, field: i.field ?? null })),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -218,7 +233,7 @@ export function streamQuery(
       const res = await fetch(`${BASE}/v1/queries/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source_id: sourceId, query }),
+        body: JSON.stringify({ source_id: sourceId, question: query }),
         signal: controller.signal,
       });
 
@@ -229,6 +244,8 @@ export function streamQuery(
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let currentEventType = "";
+      let receivedEvidence: Citation[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -239,18 +256,33 @@ export function streamQuery(
         buffer = lines.pop() ?? "";
 
         for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            currentEventType = line.slice(7).trim();
+            continue;
+          }
           if (!line.startsWith("data: ")) continue;
           const json = line.slice(6).trim();
           if (!json || json === "[DONE]") continue;
           try {
-            const event = JSON.parse(json);
-            if (event.type === "evidence") onEvidence(event.citations ?? []);
-            if (event.type === "token") onToken(event.token ?? event.text ?? "");
-            if (event.type === "result") onResult(event.cited_source_ids ?? [], event.support_status ?? "");
-            if (event.type === "done") onDone();
+            const payload = JSON.parse(json);
+            // Support both SSE event: field and inline type field
+            const eventType = currentEventType || payload.type || "";
+            if (eventType === "evidence") {
+              receivedEvidence = payload.citations ?? [];
+              onEvidence(receivedEvidence);
+            }
+            if (eventType === "token") onToken(payload.token ?? payload.text ?? "");
+            if (eventType === "result") {
+              // cited_source_ids are chunk IDs; cross-reference with evidence to get full Citation objects
+              const citedIds = new Set<string>(payload.cited_source_ids ?? []);
+              const cited = receivedEvidence.filter((c) => citedIds.has(c.chunk_id));
+              onResult(cited.length > 0 ? cited : receivedEvidence, payload.support_status ?? "");
+            }
+            if (eventType === "done") onDone();
           } catch {
             // malformed event — skip
           }
+          currentEventType = "";
         }
       }
     } catch (err) {

@@ -46,7 +46,7 @@ export function SourceCard({ source: initialSource, index = 0 }: SourceCardProps
       } catch {
         // ignore transient errors
       }
-    }, 4000);
+    }, 8000);
     return () => clearInterval(interval);
   }, [isBuilding, source.id]);
 

@@ -23,7 +23,7 @@ export function RetrievalInspector({ citations }: Props) {
         <span className="flex items-center gap-2 font-mono">
           {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
           Retrieval inspector
-          <span className="text-ink-4">· {citations.length} chunks</span>
+          <span className="text-ink-4">· {citations.length} retrieved chunk{citations.length !== 1 ? "s" : ""}</span>
         </span>
       </button>
 

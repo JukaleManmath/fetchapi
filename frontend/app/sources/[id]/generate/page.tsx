@@ -33,7 +33,7 @@ export default function GeneratePage({ params }: Props) {
     setError(null);
     setResult(null);
     try {
-      const r = await generateIntegration(selected.id, language);
+      const r = await generateIntegration(selected.id, params.id, language);
       setResult(r);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -80,6 +80,13 @@ export default function GeneratePage({ params }: Props) {
           >
             {loading ? "Generating…" : "Generate"}
           </Button>
+
+          {loading && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full border border-ink-4 border-t-transparent animate-spin" />
+              <span className="text-xs font-mono text-ink-4">Calling LLM — this typically takes 30–60 seconds…</span>
+            </div>
+          )}
 
           {error && (
             <p className="text-xs text-red-500 font-mono">{error}</p>

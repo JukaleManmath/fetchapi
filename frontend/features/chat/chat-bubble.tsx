@@ -1,3 +1,5 @@
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { CitationCard } from "./citation-card";
@@ -31,7 +33,33 @@ export function ChatBubble({ message }: Props) {
         "px-4 py-3 rounded-xl border border-border-1 bg-canvas text-sm leading-relaxed text-ink-2",
         message.loading && "animate-pulse"
       )}>
-        {message.content || (message.loading ? "Thinking…" : "")}
+        {message.loading && !message.content ? (
+          "Thinking…"
+        ) : (
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              code({ className, children, ...props }) {
+                const isBlock = className?.startsWith("language-");
+                return isBlock ? (
+                  <pre className="my-2 p-3 rounded-md bg-surface-2 overflow-x-auto text-xs font-mono text-ink-2">
+                    <code className={className} {...props}>{children}</code>
+                  </pre>
+                ) : (
+                  <code className="px-1 py-0.5 rounded bg-surface-2 font-mono text-xs text-ink-2" {...props}>{children}</code>
+                );
+              },
+              p({ children }) { return <p className="mb-2 last:mb-0">{children}</p>; },
+              ul({ children }) { return <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>; },
+              ol({ children }) { return <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>; },
+              li({ children }) { return <li className="leading-relaxed">{children}</li>; },
+              strong({ children }) { return <strong className="font-semibold text-ink">{children}</strong>; },
+              a({ href, children }) { return <a href={href} className="text-ink-2 underline" target="_blank" rel="noopener noreferrer">{children}</a>; },
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        )}
       </div>
 
       {message.support_status && (
@@ -45,7 +73,7 @@ export function ChatBubble({ message }: Props) {
       {message.citations && message.citations.length > 0 && (
         <div className="flex flex-col gap-1.5 pl-1">
           <p className="text-2xs font-mono text-ink-4 uppercase tracking-widest">
-            {message.citations.length} source{message.citations.length !== 1 ? "s" : ""}
+            {message.citations.length} cited source{message.citations.length !== 1 ? "s" : ""}
           </p>
           {message.citations.map((c, i) => (
             <CitationCard key={c.chunk_id} citation={c} index={i} />

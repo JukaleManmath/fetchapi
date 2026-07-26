@@ -114,7 +114,10 @@ export default function OperationsPage({ params }: Props) {
                       {d && (
                         <>
                           {d.description && (
-                            <p className="text-xs text-ink-3 leading-relaxed">{d.description}</p>
+                            <div
+                              className="text-xs text-ink-3 leading-relaxed prose-sm [&_a]:text-ink-2 [&_a]:underline [&_code]:font-mono [&_code]:text-ink-2"
+                              dangerouslySetInnerHTML={{ __html: d.description }}
+                            />
                           )}
 
                           {d.security_requirements && d.security_requirements.length > 0 && (
@@ -137,11 +140,6 @@ export default function OperationsPage({ params }: Props) {
                             </div>
                           )}
 
-                          {d.source_pointer && (
-                            <p className="text-2xs font-mono text-ink-4">
-                              {d.source_pointer}
-                            </p>
-                          )}
                         </>
                       )}
                     </div>

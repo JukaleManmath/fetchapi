@@ -109,7 +109,10 @@ export default function SchemasPage({ params }: Props) {
                   {d && (
                     <>
                       {d.description && (
-                        <p className="px-5 pt-4 text-xs text-ink-3 leading-relaxed">{d.description}</p>
+                        <div
+                          className="px-5 pt-4 text-xs text-ink-3 leading-relaxed [&_a]:text-ink-2 [&_a]:underline [&_code]:font-mono"
+                          dangerouslySetInnerHTML={{ __html: d.description }}
+                        />
                       )}
                       <div className="relative">
                         <div className="flex items-center justify-between px-5 pt-3 pb-1">

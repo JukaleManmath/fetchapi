@@ -1,31 +1,29 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Database } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SourceCard } from "@/features/sources/source-card";
+import { SourceCard, SourceCardSkeleton } from "@/features/sources/source-card";
 import { ScrollRevealContainer } from "@/components/ui/scroll-reveal-container";
 import { listSources } from "@/lib/api";
 import type { Source } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Sources" };
-export const revalidate = 0;
+export default function SourcesPage() {
+  const [sources, setSources] = useState<Source[]>([]);
+  const [loading, setLoading] = useState(true);
 
-async function getSources(): Promise<Source[]> {
-  try {
-    return await listSources();
-  } catch {
-    return [];
-  }
-}
-
-export default async function SourcesPage() {
-  const sources = await getSources();
+  useEffect(() => {
+    listSources()
+      .then(setSources)
+      .catch(() => setSources([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="min-h-full dot-grid">
-      {/* Header — solid so it reads clearly over the dots */}
       <div className="bg-canvas border-b border-border-1">
         <PageHeader
           title="Sources"
@@ -42,7 +40,13 @@ export default async function SourcesPage() {
       </div>
 
       <div className="px-7 py-6">
-        {sources.length === 0 ? (
+        {loading ? (
+          <ul className="flex flex-col gap-2.5">
+            {[0, 1, 2].map((i) => (
+              <li key={i}><SourceCardSkeleton /></li>
+            ))}
+          </ul>
+        ) : sources.length === 0 ? (
           <EmptyState
             icon={<Database size={28} />}
             title="No sources yet"

@@ -1,4 +1,6 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,19 +10,14 @@ import type { AuthScheme } from "@/lib/types";
 
 interface Props { params: { id: string } }
 
-export const metadata: Metadata = { title: "Auth" };
-export const revalidate = 0;
+export default function AuthPage({ params }: Props) {
+  const [schemes, setSchemes] = useState<AuthScheme[]>([]);
 
-async function getAuth(sourceId: string): Promise<AuthScheme[]> {
-  try {
-    return await listAuth(sourceId);
-  } catch {
-    return [];
-  }
-}
-
-export default async function AuthPage({ params }: Props) {
-  const schemes = await getAuth(params.id);
+  useEffect(() => {
+    listAuth(params.id)
+      .then((s) => setSchemes(s))
+      .catch(() => setSchemes([]));
+  }, [params.id]);
 
   if (schemes.length === 0) {
     return (
