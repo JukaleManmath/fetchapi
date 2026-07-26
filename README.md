@@ -6,7 +6,7 @@
 
 **Give your AI coding assistant accurate, citation-backed knowledge of any API.**
 
-Upload an OpenAPI spec. Connect your editor via MCP. Ask questions, generate integration code, validate requests — all grounded in the actual spec, not model memory.
+Upload an OpenAPI spec. Connect your editor via MCP. Ask questions, generate integration code, validate requests - all grounded in the actual spec, not model memory.
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -122,13 +122,13 @@ Nine focused tools, each backed by a typed application service:
 |---|---|
 | `fetch_list_sources` | List all ingested APIs with their active revision status |
 | `fetch_search_docs` | Hybrid search across operations, schemas, and auth schemes |
-| `fetch_get_operation` | Full operation detail — parameters, request body, responses, auth |
+| `fetch_get_operation` | Full operation detail - parameters, request body, responses, auth |
 | `fetch_get_schema` | Full schema definition with types, constraints, and examples |
-| `fetch_get_auth` | Auth schemes — type, scopes, header names, token endpoint |
+| `fetch_get_auth` | Auth schemes - type, scopes, header names, token endpoint |
 | `fetch_generate_integration` | Generate spec-grounded integration code in Python, TypeScript, or Java |
 | `fetch_validate_request` | Validate a curl command against the documented schema |
 | `fetch_explain_error` | Explain a status code in context of the spec |
-| `fetch_compare_versions` | Structural diff of two revisions — added, removed, and changed |
+| `fetch_compare_versions` | Structural diff of two revisions - added, removed, and changed |
 
 ---
 
@@ -163,7 +163,7 @@ Base URL: `http://localhost:8000` · Docs: [`/docs`](http://localhost:8000/docs)
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/v1/query` | Grounded Q&A with SSE streaming and citations |
-| `POST` | `/v1/sources/{id}/search` | Hybrid retrieval — ranked chunks with scores |
+| `POST` | `/v1/sources/{id}/search` | Hybrid retrieval - ranked chunks with scores |
 
 **Generation and validation**
 
@@ -184,9 +184,9 @@ Base URL: `http://localhost:8000` · Docs: [`/docs`](http://localhost:8000/docs)
 
 | Store | Role |
 |---|---|
-| PostgreSQL | Source of truth — sources, revisions, canonical entities, ingestion jobs, chunks |
-| Qdrant | Rebuildable retrieval index — dense vectors (1024-dim) + BM25 text index |
-| MinIO | Immutable raw spec snapshots — SHA-256 addressed, S3-compatible |
+| PostgreSQL | Source of truth - sources, revisions, canonical entities, ingestion jobs, chunks |
+| Qdrant | Rebuildable retrieval index - dense vectors (1024-dim) + BM25 text index |
+| MinIO | Immutable raw spec snapshots - SHA-256 addressed, S3-compatible |
 | Redis | Retrieval and answer cache; distributed locks for stampede prevention |
 
 **Layers**
@@ -196,7 +196,7 @@ API / MCP entrypoints        parse input, resolve auth, call one service, map er
          ↓
 Application services         orchestrate use cases; depend on domain protocols only
          ↓
-Domain entities / protocols  entities, enums, errors, pure validation — zero framework imports
+Domain entities / protocols  entities, enums, errors, pure validation - zero framework imports
          ↑
 Infrastructure adapters      PostgreSQL, Qdrant, Redis, MinIO, OpenAPI parsing, LLM/embeddings
 ```
@@ -225,7 +225,7 @@ QUEUED → FETCHING → SNAPSHOTTING → PARSING → VALIDATING → NORMALIZING
 | **EMBEDDING** | Batch-embed all chunks via the configured embeddings provider (default: NVIDIA NIM, 1024-dim) |
 | **INDEXING** | Upsert into Qdrant with deterministic point IDs; BM25 text index on the `text` payload field |
 | **VERIFYING** | Point count in Qdrant must match expected chunk count before activation |
-| **ACTIVE** | Atomic revision activation — previous revision marked SUPERSEDED in the same transaction |
+| **ACTIVE** | Atomic revision activation - previous revision marked SUPERSEDED in the same transaction |
 
 A failed revision never replaces an active one.
 
@@ -233,13 +233,13 @@ A failed revision never replaces an active one.
 
 ## Security
 
-- **SSRF protection** — external `$ref` URLs are resolved to IP and checked against blocked ranges (loopback, RFC-1918, link-local, metadata service) before any network request
-- **DoS prevention** — YAML alias expansion capped at 100 per document, enforced before `yaml.safe_load()` constructs Python objects
-- **External ref limits** — max 3 hops, 1 MB per document, 10-second timeout
-- **No code execution** — generated code is syntax-validated against the spec schema, never executed on the host
-- **No secret logging** — API keys and auth headers extracted from specs are redacted before any log write
-- **Workspace isolation** — every Qdrant query includes mandatory `workspace_id` and `revision_id` payload filters
-- **Prompt injection boundary** — ingested documentation is treated as untrusted evidence; the system prompt separates retrieved context from user instructions
+- **SSRF protection** - external `$ref` URLs are resolved to IP and checked against blocked ranges (loopback, RFC-1918, link-local, metadata service) before any network request
+- **DoS prevention** - YAML alias expansion capped at 100 per document, enforced before `yaml.safe_load()` constructs Python objects
+- **External ref limits** - max 3 hops, 1 MB per document, 10-second timeout
+- **No code execution** - generated code is syntax-validated against the spec schema, never executed on the host
+- **No secret logging** - API keys and auth headers extracted from specs are redacted before any log write
+- **Workspace isolation** - every Qdrant query includes mandatory `workspace_id` and `revision_id` payload filters
+- **Prompt injection boundary** - ingested documentation is treated as untrusted evidence; the system prompt separates retrieved context from user instructions
 
 Security tests covering SSRF (3 tests), workspace isolation (6 tests), and prompt injection (8 tests) run in CI on every push.
 
@@ -255,7 +255,7 @@ python evals/runners/answer_benchmark.py --source-id <id>
 python evals/runners/ablation_runner.py --source-id <id>
 ```
 
-**Retrieval** — hybrid mode (dense + BM25 + RRF), 25 questions per dataset:
+**Retrieval** - hybrid mode (dense + BM25 + RRF), 25 questions per dataset:
 
 | Dataset | Recall@5 | Recall@10 | MRR |
 |---|---|---|---|
@@ -263,7 +263,7 @@ python evals/runners/ablation_runner.py --source-id <id>
 | Stripe (587 ops) | **0.84** | **0.84** | **0.81** |
 | GitHub GHES (962 ops) | **0.84** | **0.84** | **0.74** |
 
-**Answer** — Petstore (30 questions, 5 abstention):
+**Answer** - Petstore (30 questions, 5 abstention):
 
 | Metric | Result | Target |
 |---|---|---|
@@ -348,8 +348,8 @@ make run            # start FastAPI with hot reload at localhost:8000
 **Tests**
 
 ```bash
-make test-unit          # unit tests — no infrastructure required
-make test-integration   # integration tests — requires running stack
+make test-unit          # unit tests - no infrastructure required
+make test-integration   # integration tests - requires running stack
 make test               # full suite
 make test-cov           # with coverage report
 ```
@@ -373,20 +373,20 @@ fetchapi/
 │   ├── src/fetch/
 │   │   ├── api/v1/           # HTTP route handlers
 │   │   ├── application/      # Use cases: ingestion, retrieval, queries, generation, validation
-│   │   ├── domain/           # Entities, enums, errors, protocols — zero framework imports
+│   │   ├── domain/           # Entities, enums, errors, protocols - zero framework imports
 │   │   ├── infrastructure/   # PostgreSQL, Qdrant, Redis, MinIO, OpenAPI parsing, LLM/embeddings
 │   │   ├── mcp/              # MCP server and 9 tools via Streamable HTTP
 │   │   └── config.py         # Pydantic settings
 │   ├── migrations/           # Alembic migrations
 │   └── tests/
-│       ├── unit/             # Pure logic — no infrastructure
+│       ├── unit/             # Pure logic - no infrastructure
 │       ├── integration/      # End-to-end against real stack
 │       ├── security/         # SSRF, workspace isolation, prompt injection
 │       └── fixtures/         # Edge-case OpenAPI specs
 ├── examples/
-│   ├── petstore/             # OpenAPI 3.0.4 — 19 operations
-│   ├── github/               # GHES 3.12 — 962 operations, 765 schemas
-│   └── stripe/               # Stripe API — 587 operations, 1,431 schemas
+│   ├── petstore/             # OpenAPI 3.0.4 - 19 operations
+│   ├── github/               # GHES 3.12 - 962 operations, 765 schemas
+│   └── stripe/               # Stripe API - 587 operations, 1,431 schemas
 ├── evals/
 │   ├── datasets/             # 90-question eval datasets
 │   ├── runners/              # retrieval, answer, validation, and ablation runners
@@ -403,11 +403,11 @@ fetchapi/
 
 ## Limitations
 
-- OpenAPI 3.0.x and 3.1.x only — no Swagger 2.0, GraphQL, AsyncAPI, or Postman Collections
-- File and URL ingestion only — no HTML documentation crawling or PDF support
-- Single workspace, single tenant — no multi-user access control
+- OpenAPI 3.0.x and 3.1.x only - no Swagger 2.0, GraphQL, AsyncAPI, or Postman Collections
+- File and URL ingestion only - no HTML documentation crawling or PDF support
+- Single workspace, single tenant - no multi-user access control
 - Generated code is syntax-validated against the spec, not executed or runtime-tested
-- Cross-encoder reranking disabled by default — requires a paid NIM tier or self-hosted endpoint
+- Cross-encoder reranking disabled by default - requires a paid NIM tier or self-hosted endpoint
 
 ---
 
